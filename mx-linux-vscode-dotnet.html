@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VS Code a .NET</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <nav class="back"><a href="index.html">← Späť na návody</a></nav>
+  <h1>VS Code a .NET na MX Linuxe</h1>
+  <p class="lead">Pridanie oficiálnych repozitárov Microsoftu a inštalácia Visual Studio Code a .NET SDK.
+    MX Linux je postavený na Debiane, takže sa používajú debianové balíky.</p>
+
+  <h2>0. Zistite verziu Debianu</h2>
+  <p>Číslo verzie Debianu budete potrebovať pri pridávaní .NET repozitára.</p>
+  <pre><code>cat /etc/debian_version</code></pre>
+  <ul>
+    <li><code>12.x</code> → Debian 12 „bookworm“ (MX Linux 23)</li>
+    <li><code>13.x</code> → Debian 13 „trixie“ (MX Linux 25)</li>
+  </ul>
+
+  <h2>1. Príprava</h2>
+  <p>Aktualizujte systém a nainštalujte nástroje na sťahovanie a overovanie kľúčov:</p>
+  <pre><code>sudo apt update
+sudo apt install -y wget gpg apt-transport-https ca-certificates</code></pre>
+
+  <h2>2. Ako fungujú repozitáre v MX Linuxe</h2>
+  <p>Zoznam zdrojov balíkov je v týchto súboroch:</p>
+  <ul>
+    <li><code>/etc/apt/sources.list.d/*.list</code> – starší jednoriadkový formát,</li>
+    <li><code>/etc/apt/sources.list.d/*.sources</code> – novší formát (deb822).</li>
+  </ul>
+  <p>Každý repozitár tretej strany potrebuje:</p>
+  <ol>
+    <li><strong>GPG kľúč</strong> – uložený napríklad v <code>/usr/share/keyrings/</code>,</li>
+    <li><strong>súbor so zdrojom</strong> v <code>/etc/apt/sources.list.d/</code>, ktorý na kľúč odkazuje cez <code>Signed-By</code>,</li>
+    <li>potom <code>sudo apt update</code>.</li>
+  </ol>
+  <div class="note">
+    Nástroj <strong>MX Repo Manager</strong> slúži len na výber zrkadla (mirror) pre repozitáre MX a Debianu.
+    Repozitáre tretích strán, napríklad od Microsoftu, sa pridávajú ručne podľa krokov nižšie.
+  </div>
+
+  <h2>3. Visual Studio Code</h2>
+
+  <h3>Možnosť A: MX Package Installer (najjednoduchšie)</h3>
+  <p>Otvorte <strong>MX Package Installer</strong>, v záložke <em>Popular Applications</em> nájdite
+    <em>Development → VS Code</em>, zaškrtnite a kliknite na <em>Install</em>. Repozitár sa pridá automaticky.</p>
+
+  <h3>Možnosť B: Ručné pridanie repozitára</h3>
+  <p>1. Stiahnite a uložte kľúč Microsoftu:</p>
+  <pre><code>wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor &gt; microsoft.gpg
+sudo install -D -o root -g root -m 644 microsoft.gpg /usr/share/keyrings/microsoft.gpg
+rm -f microsoft.gpg</code></pre>
+
+  <p>2. Vytvorte súbor so zdrojom:</p>
+  <pre><code>sudo tee /etc/apt/sources.list.d/vscode.sources &gt; /dev/null &lt;&lt;'EOF'
+Types: deb
+URIs: https://packages.microsoft.com/repos/code
+Suites: stable
+Components: main
+Architectures: amd64,arm64,armhf
+Signed-By: /usr/share/keyrings/microsoft.gpg
+EOF</code></pre>
+
+  <p>3. Nainštalujte VS Code:</p>
+  <pre><code>sudo apt update
+sudo apt install code</code></pre>
+
+  <p>4. Overte inštaláciu:</p>
+  <pre><code>code --version</code></pre>
+  <p>Aktualizácie VS Code potom prichádzajú spolu s ostatnými aktualizáciami systému.</p>
+
+  <h2>4. .NET SDK</h2>
+
+  <h3>Pridanie repozitára Microsoftu</h3>
+  <p>Microsoft poskytuje balík, ktorý pridá repozitár aj kľúč naraz. Číslo <code>12</code> v adrese
+    nahraďte vašou verziou Debianu z kroku 0 (napr. <code>13</code>).</p>
+  <pre><code>wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
+rm packages-microsoft-prod.deb
+sudo apt update</code></pre>
+
+  <h3>Inštalácia SDK</h3>
+  <p>Pre vývoj nainštalujte <strong>SDK</strong> (obsahuje aj runtime). Odporúčaná je aktuálna LTS verzia:</p>
+  <pre><code>sudo apt install -y dotnet-sdk-10.0</code></pre>
+  <p>Ak projekt vyžaduje staršiu verziu, môžete nainštalovať viac SDK naraz, napríklad:</p>
+  <pre><code>sudo apt install -y dotnet-sdk-8.0</code></pre>
+  <p>Ak na počítači chcete aplikácie len spúšťať, stačí runtime:</p>
+  <pre><code>sudo apt install -y aspnetcore-runtime-10.0</code></pre>
+
+  <h3>Overenie</h3>
+  <pre><code>dotnet --info
+dotnet --list-sdks</code></pre>
+
+  <h3>Skúšobný projekt</h3>
+  <pre><code>dotnet new console -o Ahoj
+cd Ahoj
+dotnet run</code></pre>
+
+  <h2>5. Prepojenie VS Code s .NET</h2>
+  <p>Vo VS Code otvorte rozšírenia (<code>Ctrl+Shift+X</code>) a nainštalujte <strong>C# Dev Kit</strong>
+    (automaticky pridá aj rozšírenie <em>C#</em>). Alebo z terminálu:</p>
+  <pre><code>code --install-extension ms-dotnettools.csdevkit</code></pre>
+  <p>Potom otvorte priečinok projektu:</p>
+  <pre><code>code Ahoj</code></pre>
+
+  <h2>Riešenie problémov</h2>
+  <ul>
+    <li><strong>„Conflicting values set for option Signed-By“</strong> – ten istý repozitár je pridaný dvakrát
+      s rôznymi kľúčmi. Pozrite <code>ls /etc/apt/sources.list.d/</code> a duplicitný súbor zmažte.</li>
+    <li><strong>„NO_PUBKEY …“</strong> – chýba kľúč alebo je zlá cesta v <code>Signed-By</code>. Zopakujte krok s kľúčom.</li>
+    <li><strong>Balík <code>dotnet-sdk-…</code> sa nenašiel</strong> – skontrolujte, či verzia Debianu v adrese
+      <code>packages-microsoft-prod.deb</code> sedí s vaším systémom, a spustite <code>sudo apt update</code>.</li>
+    <li><strong>Odstránenie repozitára</strong> – zmažte jeho súbor v <code>/etc/apt/sources.list.d/</code> a spustite <code>sudo apt update</code>.</li>
+  </ul>
+</main>
+</body>
+</html>

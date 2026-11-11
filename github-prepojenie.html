@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prepojenie GitHubu</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <nav class="back"><a href="index.html">← Späť na návody</a></nav>
+  <h1>Prepojenie GitHubu s Claude Code</h1>
+  <p class="lead">Ako dostať projekt z GitHubu do cloudovej relácie Claude Code a ako posielať zmeny späť.</p>
+
+  <h2>1. Verejný repozitár</h2>
+  <p>Pri verejnom repozitári netreba nič nastavovať. Stačí poslať Claudovi odkaz, napríklad:</p>
+  <pre><code>https://github.com/vlastnik/projekt</code></pre>
+  <p>Claude ho naklonuje do relácie. Ak však chcete zmeny posielať späť (push, pull request), aj tak treba GitHub pripojiť podľa kroku 2.</p>
+
+  <h2>2. Pripojenie GitHub účtu</h2>
+  <ol>
+    <li>Na <a href="https://claude.ai">claude.ai</a> otvorte <strong>Settings → Connectors</strong>.</li>
+    <li>Pri položke <strong>GitHub</strong> kliknite na <strong>Connect</strong> a prihláste sa svojím GitHub účtom.</li>
+    <li>GitHub ponúkne inštaláciu aplikácie <strong>Claude</strong>. Vyberte:
+      <ul>
+        <li><em>All repositories</em> – prístup ku všetkým repozitárom, alebo</li>
+        <li><em>Only select repositories</em> – len k vybraným (bezpečnejšie).</li>
+      </ul>
+    </li>
+    <li>Potvrďte inštaláciu a vráťte sa do Claude.</li>
+  </ol>
+  <div class="note">
+    Ak repozitár patrí <strong>organizácii</strong>, správca organizácie musí inštaláciu aplikácie Claude schváliť.
+    Bez toho sa repozitár v zozname neobjaví.
+  </div>
+
+  <h2>3. Pridanie repozitára do relácie</h2>
+  <p>Po pripojení napíšte Claudovi názov repozitára vo formáte <code>vlastnik/nazov</code>, napríklad:</p>
+  <pre><code>Pridaj repozitár mojfirma/webova-aplikacia a naklonuj ho.</code></pre>
+  <p>Claude repozitár pridá do relácie, naklonuje ho a môže v ňom pracovať.</p>
+  <p>Pri vytváraní <strong>novej</strong> relácie na <a href="https://claude.ai/code">claude.ai/code</a> môžete repozitár vybrať priamo v ponuke ešte pred začatím práce.</p>
+
+  <h2>4. Uloženie zmien</h2>
+  <p>Cloudová relácia beží v <strong>dočasnom kontajneri</strong>. Po ukončení relácie alebo po dlhšej nečinnosti sa kontajner zmaže. Preto:</p>
+  <ul>
+    <li>požiadajte Claude, aby zmeny <strong>commitol a pushol</strong> do vetvy na GitHube,</li>
+    <li>prípadne nech vytvorí <strong>pull request</strong>, ak chcete zmeny najprv skontrolovať.</li>
+  </ul>
+  <pre><code>Commitni zmeny, pushni ich do novej vetvy a vytvor pull request.</code></pre>
+
+  <h2>Riešenie problémov</h2>
+  <ul>
+    <li><strong>Repozitár sa nedá nájsť</strong> – skontrolujte, či je vybraný v nastaveniach aplikácie Claude na GitHube
+      (<em>GitHub → Settings → Applications → Claude → Configure</em>).</li>
+    <li><strong>Prístup zamietnutý pri push</strong> – aplikácia nemá oprávnenie na zápis alebo repozitár nie je v povolenom zozname.</li>
+    <li><strong>Organizačný repozitár chýba</strong> – treba schválenie od správcu organizácie.</li>
+  </ul>
+
+  <p>Viac informácií: <a href="https://code.claude.com/docs/en/claude-code-on-the-web">dokumentácia Claude Code on the web</a>.</p>
+</main>
+</body>
+</html>
