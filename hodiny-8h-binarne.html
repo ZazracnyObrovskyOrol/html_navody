@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="8-hodinový ciferník, ktorého čísla sa menia podľa aktuálnej tretiny dňa, a binárne 24-hodinové hodiny.">
+<title>8-hodinové a binárne hodiny</title>
+<style>
+  :root{
+    --bg1:#1b2040; --bg2:#3a2f6b; --bg3:#0d1226;
+    --card:rgba(255,255,255,.07); --cardb:rgba(255,255,255,.16);
+    --face:#232a52; --ink:#e8ecff; --muted:#a9b2e0;
+    --hour:#ffd9a0; --min:#e8ecff; --sec:#ff8fa3; --accent:#9db4ff;
+    --led-off:rgba(255,255,255,.10); --glow:rgba(157,180,255,.35);
+  }
+  body[data-seg="1"]{
+    --bg1:#d8f0f2; --bg2:#a9d6e5; --bg3:#eaf7f1;
+    --card:rgba(255,255,255,.55); --cardb:rgba(255,255,255,.9);
+    --face:#fbfefe; --ink:#1f3b4d; --muted:#4d6f82;
+    --hour:#1f5f7a; --min:#2c8aa8; --sec:#e76f51; --accent:#2a9d8f;
+    --led-off:rgba(31,59,77,.12); --glow:rgba(42,157,143,.3);
+  }
+  body[data-seg="2"]{
+    --bg1:#ffd6a5; --bg2:#ff9e9e; --bg3:#ffe8c7;
+    --card:rgba(255,248,240,.5); --cardb:rgba(255,255,255,.85);
+    --face:#fff8ef; --ink:#5a2d3c; --muted:#8a5a63;
+    --hour:#b5434f; --min:#d9694f; --sec:#6a4c93; --accent:#e07a5f;
+    --led-off:rgba(90,45,60,.12); --glow:rgba(224,122,95,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    color:var(--ink);
+    background:linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+    background-attachment:fixed;
+    min-height:100vh; padding:20px 16px 40px;
+    display:flex;flex-direction:column;align-items:center;gap:22px;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;
+    background:
+      radial-gradient(circle at 15% 20%,var(--glow),transparent 35%),
+      radial-gradient(circle at 85% 80%,var(--glow),transparent 40%);
+  }
+  nav{position:relative;z-index:1;align-self:stretch;max-width:1000px;margin:0 auto;width:100%}
+  nav a{color:var(--muted);text-decoration:none;font-size:.9rem}
+  nav a:hover{color:var(--ink)}
+  header{text-align:center;position:relative;z-index:1}
+  h1{margin:0;font-weight:300;font-size:clamp(1.5rem,3vw,2.3rem);letter-spacing:.04em}
+  .seg{margin-top:6px;color:var(--muted)}
+  .seg b{color:var(--accent);font-weight:600}
+  main{
+    position:relative;z-index:1;width:100%;max-width:1000px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--cardb);border-radius:28px;
+    padding:22px 18px 20px;text-align:center;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 18px 50px -20px rgba(0,0,0,.35);
+  }
+  .card h2{margin:0;font-size:1.25rem;font-weight:600;letter-spacing:.03em}
+  .card .sub{font-size:.85rem;color:var(--muted);margin:2px 0 12px}
+  svg{width:100%;height:auto;max-width:380px;display:block;margin:0 auto;overflow:visible}
+  .facebg{fill:var(--face);transition:fill .8s}
+  .rim{fill:none;stroke:var(--accent);stroke-width:1.6;opacity:.8}
+  .tick{stroke:var(--muted);stroke-width:.5;opacity:.7}
+  .major{stroke:var(--ink);stroke-width:1.6;opacity:.95}
+  .num{fill:var(--ink);text-anchor:middle;dominant-baseline:central;font-weight:500}
+  .num.now{fill:var(--accent);font-weight:700}
+  .h{stroke:var(--hour);stroke-linecap:round}
+  .m{stroke:var(--min);stroke-linecap:round}
+  .s{stroke:var(--sec);stroke-linecap:round}
+  .hub{fill:var(--hour);stroke:var(--face);stroke-width:1.5}
+  .hubs{fill:var(--sec)}
+  .progress{fill:none;stroke:var(--accent);stroke-width:3;opacity:.35;stroke-linecap:round}
+  .digital{font-size:1.6rem;font-weight:300;margin-top:14px;font-variant-numeric:tabular-nums;letter-spacing:.06em}
+  .info{margin-top:6px;font-size:.85rem;color:var(--muted);line-height:1.5}
+  .info b{color:var(--ink);font-weight:600}
+
+  /* binárne hodiny */
+  .bin{display:grid;grid-template-columns:auto repeat(6,1fr) auto;gap:10px 8px;align-items:center;
+       max-width:420px;margin:18px auto 0}
+  .bin .w{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .bin .lbl{font-size:.85rem;color:var(--muted);text-align:left;padding-right:4px}
+  .bin .val{font-size:1.1rem;font-variant-numeric:tabular-nums;text-align:right;min-width:2.2em}
+  .led{width:100%;max-width:40px;aspect-ratio:1;border-radius:50%;margin:0 auto;
+       background:var(--led-off);border:1px solid var(--cardb);transition:background .25s,box-shadow .25s}
+  .led.on{background:var(--c);box-shadow:0 0 14px var(--c)}
+  .led.none{visibility:hidden}
+  .row-h{--c:var(--hour)} .row-m{--c:var(--min)} .row-s{--c:var(--sec)}
+  .bits{margin-top:16px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.95rem;letter-spacing:.08em}
+  .legend{position:relative;z-index:1;font-size:.82rem;color:var(--muted);text-align:center;max-width:700px;line-height:1.6}
+</style>
+</head>
+<body data-seg="0">
+
+<nav><a href="index.html">← Späť na návody</a></nav>
+
+<header>
+  <h1>8-hodinové a binárne hodiny</h1>
+  <div class="seg" id="segLabel"></div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>8-hodinový cyklus</h2>
+    <div class="sub">Čísla na ciferníku zodpovedajú aktuálnej tretine dňa</div>
+    <svg id="clock8" viewBox="-105 -105 210 210"></svg>
+    <div class="digital" id="dig8"></div>
+    <div class="info" id="info8"></div>
+  </section>
+
+  <section class="card">
+    <h2>Binárne 24-hodinové hodiny</h2>
+    <div class="sub">Svieti = 1, nesvieti = 0 · súčet hodnôt v riadku dáva číslo</div>
+    <div class="bin" id="bin"></div>
+    <div class="bits" id="bits"></div>
+    <div class="digital" id="digBin"></div>
+  </section>
+</main>
+
+<div class="legend">
+  Deň je rozdelený na tri 8-hodinové úseky: <b>0–8</b>, <b>8–16</b> a <b>16–24</b>.
+  Hodinová ručička obehne ciferník raz za 8 hodín; navrchu je vždy začiatok aktuálneho úseku.
+</div>
+
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const SEGMENTS = [
+    { name: "Noc",   icon: "🌙" },
+    { name: "Deň",   icon: "☀️" },
+    { name: "Večer", icon: "🏡" },
+  ];
+  const el = (tag, attrs = {}, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const pol = (r, deg) => {
+    const a = (deg - 90) * Math.PI / 180;
+    return [r * Math.cos(a), r * Math.sin(a)];
+  };
+  const p2 = n => String(n).padStart(2, "0");
+
+  // --- 8-hodinový ciferník ---
+  const svg = document.getElementById("clock8");
+  el("circle", { r: 101, class: "facebg" }, svg);
+  el("circle", { r: 101, class: "rim" }, svg);
+  const progress = el("path", { class: "progress" }, svg);
+  for (let i = 0; i < 60; i++) {
+    const [x1, y1] = pol(94, i * 6), [x2, y2] = pol(i % 5 ? 91 : 89, i * 6);
+    el("line", { x1, y1, x2, y2, class: "tick" }, svg);
+  }
+  const nums = [];
+  for (let i = 0; i < 8; i++) {
+    const deg = i * 45;
+    const [x1, y1] = pol(94, deg), [x2, y2] = pol(83, deg);
+    el("line", { x1, y1, x2, y2, class: "major" }, svg);
+    const [tx, ty] = pol(72, deg);
+    nums.push(el("text", { x: tx, y: ty, class: "num", "font-size": 14 }, svg));
+  }
+  const segText = el("text", { x: 0, y: 32, class: "num", "font-size": 7, opacity: .6 }, svg);
+  const hHand = el("line", { x1: 0, y1: 7, x2: 0, y2: -50, class: "h", "stroke-width": 4.6 }, svg);
+  const mHand = el("line", { x1: 0, y1: 10, x2: 0, y2: -78, class: "m", "stroke-width": 3 }, svg);
+  const sHand = el("line", { x1: 0, y1: 16, x2: 0, y2: -84, class: "s", "stroke-width": 1.1 }, svg);
+  el("circle", { r: 4.6, class: "hub" }, svg);
+  el("circle", { r: 2, class: "hubs" }, svg);
+
+  const arc = deg => { // oblúk od 0° po deg na okraji ciferníka
+    if (deg < .2) return "";
+    if (deg > 359.8) deg = 359.8;
+    const [x, y] = pol(98, deg);
+    return `M0 -98A98 98 0 ${deg > 180 ? 1 : 0} 1 ${x} ${y}`;
+  };
+
+  // --- binárne hodiny ---
+  const bin = document.getElementById("bin");
+  const WEIGHTS = [32, 16, 8, 4, 2, 1];
+  const ROWS = [
+    { key: "h", label: "hod", bits: 5 },
+    { key: "m", label: "min", bits: 6 },
+    { key: "s", label: "sek", bits: 6 },
+  ];
+  const head = document.createElement("div"); bin.appendChild(head);
+  WEIGHTS.forEach(w => {
+    const d = document.createElement("div"); d.className = "w"; d.textContent = w; bin.appendChild(d);
+  });
+  bin.appendChild(document.createElement("div"));
+  ROWS.forEach(r => {
+    const lbl = document.createElement("div"); lbl.className = "lbl"; lbl.textContent = r.label;
+    bin.appendChild(lbl);
+    r.leds = WEIGHTS.map((w, i) => {
+      const d = document.createElement("div");
+      d.className = "led row-" + r.key + (i < 6 - r.bits ? " none" : "");
+      d.title = w;
+      bin.appendChild(d);
+      return d;
+    });
+    r.val = document.createElement("div"); r.val.className = "val"; bin.appendChild(r.val);
+  });
+  const bitsEl = document.getElementById("bits");
+  const digBin = document.getElementById("digBin");
+
+  // --- aktualizácia ---
+  const segLabel = document.getElementById("segLabel");
+  const dig8 = document.getElementById("dig8");
+  const info8 = document.getElementById("info8");
+  let lastSeg = -1, lastSec = -1;
+
+  function tick() {
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes(), sec = now.getSeconds();
+    const s = sec + now.getMilliseconds() / 1000;
+    const mm = m + s / 60;
+    const hrs = h + mm / 60;
+    const seg = Math.floor(h / 8);
+    const start = seg * 8;
+
+    if (seg !== lastSeg) {
+      lastSeg = seg;
+      document.body.dataset.seg = seg;
+      nums.forEach((t, i) => t.textContent = start + i);
+      segText.textContent = `${start}:00 – ${start + 8}:00`;
+      const S = SEGMENTS[seg];
+      segLabel.innerHTML = `${S.icon} <b>${S.name}</b> · ${start}:00 – ${start + 8}:00`;
+    }
+
+    const inSeg = hrs - start;              // 0 … 8
+    const a = inSeg / 8 * 360;
+    hHand.setAttribute("transform", `rotate(${a})`);
+    mHand.setAttribute("transform", `rotate(${mm * 6})`);
+    sHand.setAttribute("transform", `rotate(${s * 6})`);
+    progress.setAttribute("d", arc(a));
+
+    if (sec !== lastSec) {
+      lastSec = sec;
+      nums.forEach((t, i) => t.classList.toggle("now", start + i === h));
+      const left = 8 * 60 - (h - start) * 60 - m;
+      dig8.textContent = `${p2(h)}:${p2(m)}:${p2(sec)}`;
+      info8.innerHTML =
+        `hodina úseku: <b>${h - start + 1}. z 8</b> · prejdené <b>${(inSeg / 8 * 100).toFixed(0)} %</b><br>` +
+        `do konca úseku: <b>${Math.floor(left / 60)} h ${left % 60} min</b>`;
+
+      const vals = { h, m, s: sec };
+      const strs = [];
+      ROWS.forEach(r => {
+        const v = vals[r.key];
+        r.leds.forEach((d, i) => d.classList.toggle("on", (v & WEIGHTS[i]) !== 0));
+        r.val.textContent = v;
+        strs.push(v.toString(2).padStart(r.bits, "0"));
+      });
+      bitsEl.textContent = strs.join(" : ");
+      digBin.textContent = `${p2(h)}:${p2(m)}:${p2(sec)}`;
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
