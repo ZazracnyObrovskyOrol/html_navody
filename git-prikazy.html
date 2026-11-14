@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git a GitHub – príkazy</title>
+<meta name="description" content="Prehľadný ťahák: pull, úpravy, commit, push, vetvy, pull requesty a oprava chýb.">
+<link rel="stylesheet" href="style.css">
+<style>
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 16px 0 8px; padding: 0; list-style: none; }
+  .toc li { margin: 0; }
+  .toc a {
+    display: inline-block; padding: 4px 10px; border: 1px solid var(--border);
+    border-radius: 999px; background: var(--card); text-decoration: none; font-size: 0.9rem;
+  }
+  .toc a:hover { border-color: var(--accent); }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 4px; }
+  .flow span {
+    padding: 4px 10px; border-radius: 6px; background: var(--card); border: 1px solid var(--border);
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.88rem;
+  }
+  .flow b { color: var(--muted); font-weight: normal; }
+
+  .step {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 4px 16px 6px; margin: 12px 0;
+  }
+  .step h3 { margin-top: 12px; display: flex; gap: 10px; align-items: baseline; }
+  .step h3 .n {
+    flex: none; width: 1.6em; height: 1.6em; line-height: 1.6em; text-align: center;
+    border-radius: 50%; background: var(--accent); color: var(--bg); font-size: 0.85rem;
+  }
+  .step p { margin: 6px 0; }
+
+  pre { position: relative; }
+  pre .c { color: var(--muted); }
+  .copy {
+    position: absolute; top: 6px; right: 6px; font: 12px system-ui, sans-serif;
+    padding: 2px 8px; border-radius: 5px; border: 1px solid var(--border);
+    background: var(--card); color: var(--muted); cursor: pointer; opacity: 0.75;
+  }
+  .copy:hover { opacity: 1; color: var(--text); }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+  td:first-child { white-space: nowrap; }
+  @media (max-width: 600px) { td:first-child { white-space: normal; } }
+  .warn { border-left-color: #d9534f; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="back"><a href="index.html">← Späť na návody</a></nav>
+  <h1>Git a GitHub – príkazy</h1>
+  <p class="lead">Prehľadný ťahák: stiahnuť zmeny, upraviť, commitnúť a pushnúť. K tomu vetvy, pull requesty a oprava bežných chýb.</p>
+
+  <ul class="toc">
+    <li><a href="#zaklad">Základný scenár</a></li>
+    <li><a href="#stav">Stav a história</a></li>
+    <li><a href="#overit">Overiť pred pullom</a></li>
+    <li><a href="#vetvy">Vetvy</a></li>
+    <li><a href="#pr">Pull request</a></li>
+    <li><a href="#konflikt">Konflikty</a></li>
+    <li><a href="#oprava">Oprava chýb</a></li>
+    <li><a href="#nastavenie">Prvé nastavenie</a></li>
+    <li><a href="#tahak">Ťahák</a></li>
+  </ul>
+
+  <!-- ===================================================== -->
+  <h2 id="zaklad">Základný scenár: pull → úpravy → commit → push</h2>
+  <div class="flow">
+    <span>git pull</span><b>→</b><span>úpravy</span><b>→</b><span>git add</span><b>→</b><span>git commit</span><b>→</b><span>git push</span>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">1</span>Stiahnuť najnovšie zmeny</h3>
+    <p>Vždy začni tým, že si stiahneš, čo medzitým pribudlo na GitHube.</p>
+<pre><code>git status             <span class="c"># musí byť čisto: "nothing to commit"</span>
+git pull</code></pre>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">2</span>Urobiť úpravy</h3>
+    <p>Uprav súbory v editore. Potom sa pozri, čo sa zmenilo:</p>
+<pre><code>git status             <span class="c"># ktoré súbory sú zmenené / nové</span>
+git diff               <span class="c"># čo presne sa zmenilo (riadok po riadku)</span></code></pre>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">3</span>Pripraviť zmeny na commit</h3>
+<pre><code>git add subor.html     <span class="c"># konkrétny súbor</span>
+git add .              <span class="c"># všetko v aktuálnom adresári</span>
+git diff --staged      <span class="c"># kontrola, čo pôjde do commitu</span></code></pre>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">4</span>Commit</h3>
+<pre><code>git commit -m "Krátky popis, čo a prečo sa zmenilo"</code></pre>
+    <p>Správu píš v rozkazovacom/opisnom tvare, napr. <em>„Pridaná stránka s Git príkazmi“</em>.</p>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">5</span>Push na GitHub</h3>
+<pre><code>git push</code></pre>
+    <p>Ak push zlyhá s <code>rejected … fetch first</code>, niekto medzitým pushol. Urob <code>git pull</code> a potom znova <code>git push</code>.</p>
+  </div>
+
+  <div class="note">
+    <strong>Celé naraz</strong> (keď vieš, čo robíš):
+<pre><code>git pull
+<span class="c"># … úpravy …</span>
+git add .
+git commit -m "Popis zmeny"
+git push</code></pre>
+  </div>
+
+  <!-- ===================================================== -->
+  <h2 id="stav">Stav a história</h2>
+<pre><code>git status                     <span class="c"># čo je zmenené, na akej vetve som</span>
+git log --oneline -10          <span class="c"># posledných 10 commitov</span>
+git log --oneline --graph --all <span class="c"># história so všetkými vetvami</span>
+git show                       <span class="c"># detail posledného commitu</span>
+git show abc1234               <span class="c"># detail konkrétneho commitu</span>
+git diff                       <span class="c"># neuložené zmeny (ešte bez add)</span>
+git diff --staged              <span class="c"># zmeny pripravené na commit</span></code></pre>
+
+  <!-- ===================================================== -->
+  <h2 id="overit">Overiť zmeny pred pullom</h2>
+  <p><code>git pull</code> = <code>git fetch</code> + zlúčenie. Ak chceš najprv vidieť, čo prichádza, rozdeľ to na dva kroky:</p>
+<pre><code>git fetch                          <span class="c"># stiahne info, nič nemení v súboroch</span>
+git status                         <span class="c"># "behind by 3 commits" = 3 nové commity</span>
+git log --oneline HEAD..origin/main <span class="c"># aké commity prídu</span>
+git diff HEAD origin/main          <span class="c"># aké zmeny v súboroch prídu</span>
+git pull                           <span class="c"># až potom stiahnuť</span></code></pre>
+  <p>Ak máš rozpracované zmeny a chceš pullnúť, odlož ich bokom:</p>
+<pre><code>git stash          <span class="c"># odloží neuložené zmeny</span>
+git pull
+git stash pop      <span class="c"># vráti ich späť</span></code></pre>
+  <p>Čistejšia história bez „merge“ commitov:</p>
+<pre><code>git pull --rebase</code></pre>
+
+  <!-- ===================================================== -->
+  <h2 id="vetvy">Vetvy</h2>
+  <p>Vetva = samostatná línia práce. Na <code>main</code> nechaj funkčný stav, nové veci rob vo vetve.</p>
+
+  <h3>Vytvoriť vetvu a pracovať v nej</h3>
+<pre><code>git switch main
+git pull                           <span class="c"># začni z aktuálneho main</span>
+git switch -c nova-funkcia         <span class="c"># vytvorí vetvu a prepne sa do nej</span>
+<span class="c"># … úpravy, add, commit …</span>
+git push -u origin nova-funkcia    <span class="c"># prvý push vetvy (-u ju prepojí s GitHubom)</span>
+git push                           <span class="c"># ďalšie pushe už stačí takto</span></code></pre>
+
+  <h3>Prehľad a prepínanie</h3>
+<pre><code>git branch             <span class="c"># lokálne vetvy (* = aktuálna)</span>
+git branch -a          <span class="c"># aj vetvy na GitHube</span>
+git switch main        <span class="c"># prepnúť sa na existujúcu vetvu</span>
+git switch nazov       <span class="c"># stiahne a prepne aj vetvu, ktorá je len na GitHube</span></code></pre>
+
+  <h3>Zlúčiť vetvu do main (bez pull requestu)</h3>
+<pre><code>git switch main
+git pull
+git merge nova-funkcia
+git push</code></pre>
+
+  <h3>Zmazať vetvu</h3>
+<pre><code>git branch -d nova-funkcia             <span class="c"># lokálne (len ak je zlúčená)</span>
+git push origin --delete nova-funkcia  <span class="c"># na GitHube</span>
+git fetch --prune                      <span class="c"># upratať odkazy na zmazané vetvy</span></code></pre>
+
+  <!-- ===================================================== -->
+  <h2 id="pr">Pull request (GitHub)</h2>
+  <p>Pull request (PR) = žiadosť o zlúčenie vetvy do <code>main</code> s možnosťou kontroly. Príkazy nižšie používajú nástroj <a href="https://cli.github.com/"><code>gh</code></a>; to isté sa dá robiť aj na webe GitHubu.</p>
+
+  <h3>Vytvoriť PR</h3>
+<pre><code>git push -u origin nova-funkcia
+gh pr create --fill                    <span class="c"># názov a popis z commitov</span>
+gh pr create --title "Názov" --body "Popis"
+gh pr create --web                     <span class="c"># otvorí formulár v prehliadači</span></code></pre>
+
+  <h3>Preveriť cudzí PR</h3>
+<pre><code>gh pr list                     <span class="c"># otvorené pull requesty</span>
+gh pr view 12                  <span class="c"># popis a stav PR č. 12</span>
+gh pr diff 12                  <span class="c"># zmeny v PR</span>
+gh pr checkout 12              <span class="c"># stiahne PR lokálne – dá sa vyskúšať</span>
+gh pr checks 12                <span class="c"># výsledky automatických testov</span>
+git switch main                <span class="c"># po skúšaní späť na main</span></code></pre>
+
+  <h3>Schváliť a zlúčiť</h3>
+<pre><code>gh pr review 12 --approve
+gh pr review 12 --request-changes -b "Prosím oprav …"
+gh pr merge 12 --squash --delete-branch    <span class="c"># zlúči a zmaže vetvu</span>
+git switch main && git pull                <span class="c"># stiahni zlúčený výsledok</span></code></pre>
+
+  <!-- ===================================================== -->
+  <h2 id="konflikt">Riešenie konfliktov</h2>
+  <p>Konflikt vznikne, keď ty aj niekto iný zmeníte ten istý riadok. Git to oznámi pri <code>pull</code> alebo <code>merge</code>.</p>
+<pre><code>git status                 <span class="c"># "both modified" = súbory s konfliktom</span></code></pre>
+  <p>V súbore nájdeš značky – nechaj správnu verziu a značky zmaž:</p>
+<pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+moja verzia
+=======
+verzia z GitHubu
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; origin/main</code></pre>
+<pre><code>git add subor.html         <span class="c"># označí konflikt ako vyriešený</span>
+git commit                 <span class="c"># dokončí merge (pri rebase: git rebase --continue)</span>
+git push</code></pre>
+  <p>Ak sa chceš vrátiť pred pokus o zlúčenie: <code>git merge --abort</code> (alebo <code>git rebase --abort</code>).</p>
+
+  <!-- ===================================================== -->
+  <h2 id="oprava">Oprava chýb</h2>
+  <table>
+    <tr><th>Situácia</th><th>Príkaz</th></tr>
+    <tr><td>Zahodiť zmeny v súbore</td><td><code>git restore subor.html</code></td></tr>
+    <tr><td>Zrušiť <code>git add</code></td><td><code>git restore --staged subor.html</code></td></tr>
+    <tr><td>Opraviť správu posledného commitu</td><td><code>git commit --amend -m "Nová správa"</code></td></tr>
+    <tr><td>Pridať zabudnutý súbor do posl. commitu</td><td><code>git add subor</code> → <code>git commit --amend --no-edit</code></td></tr>
+    <tr><td>Zrušiť posledný commit, zmeny ponechať</td><td><code>git reset --soft HEAD~1</code></td></tr>
+    <tr><td>Vrátiť commit, ktorý už je na GitHube</td><td><code>git revert abc1234</code> → <code>git push</code></td></tr>
+    <tr><td>Odložiť rozpracované zmeny</td><td><code>git stash</code> / <code>git stash pop</code></td></tr>
+    <tr><td>Commit omylom na main namiesto vetvy</td><td><code>git switch -c nova-vetva</code> → <code>git switch main</code> → <code>git reset --hard origin/main</code></td></tr>
+  </table>
+  <div class="note warn">
+    <code>--amend</code> a <code>reset</code> používaj len na commity, ktoré ešte <strong>nie sú pushnuté</strong>.
+    <code>git reset --hard</code> nenávratne zmaže necommitnuté zmeny.
+  </div>
+
+  <!-- ===================================================== -->
+  <h2 id="nastavenie">Prvé nastavenie</h2>
+<pre><code>git config --global user.name "Meno"
+git config --global user.email "meno@example.com"
+git config --global init.defaultBranch main
+git config --global pull.rebase false     <span class="c"># pull robí merge (predvolené správanie)</span>
+
+gh auth login                             <span class="c"># prihlásenie do GitHubu pre gh aj git push</span></code></pre>
+
+  <h3>Stiahnuť existujúci projekt</h3>
+<pre><code>git clone https://github.com/vlastnik/projekt.git
+cd projekt</code></pre>
+
+  <h3>Nový projekt na GitHub</h3>
+<pre><code>git init
+git add .
+git commit -m "Prvý commit"
+gh repo create projekt --private --source=. --push</code></pre>
+
+  <h3>Prepojiť s už existujúcim repozitárom na GitHube</h3>
+<pre><code>git remote add origin https://github.com/vlastnik/projekt.git
+git push -u origin main
+git remote -v              <span class="c"># kontrola, kam sa pushuje</span></code></pre>
+
+  <!-- ===================================================== -->
+  <h2 id="tahak">Ťahák</h2>
+  <table>
+    <tr><th>Príkaz</th><th>Čo robí</th></tr>
+    <tr><td><code>git status</code></td><td>stav pracovného adresára</td></tr>
+    <tr><td><code>git pull</code></td><td>stiahne a zlúči zmeny z GitHubu</td></tr>
+    <tr><td><code>git fetch</code></td><td>len stiahne info o zmenách, nič nemení</td></tr>
+    <tr><td><code>git add .</code></td><td>pripraví všetky zmeny na commit</td></tr>
+    <tr><td><code>git commit -m "…"</code></td><td>uloží zmeny do histórie</td></tr>
+    <tr><td><code>git push</code></td><td>pošle commity na GitHub</td></tr>
+    <tr><td><code>git switch -c vetva</code></td><td>nová vetva</td></tr>
+    <tr><td><code>git switch main</code></td><td>prepnúť vetvu</td></tr>
+    <tr><td><code>git merge vetva</code></td><td>zlúčiť vetvu do aktuálnej</td></tr>
+    <tr><td><code>git log --oneline</code></td><td>stručná história</td></tr>
+    <tr><td><code>git diff</code></td><td>čo sa zmenilo</td></tr>
+    <tr><td><code>git stash</code></td><td>odložiť zmeny bokom</td></tr>
+    <tr><td><code>gh pr create</code></td><td>vytvoriť pull request</td></tr>
+    <tr><td><code>gh pr checkout 12</code></td><td>stiahnuť PR na vyskúšanie</td></tr>
+    <tr><td><code>gh pr merge 12</code></td><td>zlúčiť PR</td></tr>
+  </table>
+</main>
+<script>
+// Tlačidlo „Kopírovať“ pri každom bloku príkazov (komentáre # sa nekopírujú).
+document.querySelectorAll("pre").forEach(function (pre) {
+  var b = document.createElement("button");
+  b.className = "copy";
+  b.type = "button";
+  b.textContent = "Kopírovať";
+  b.addEventListener("click", function () {
+    var kod = pre.querySelector("code").cloneNode(true);
+    kod.querySelectorAll(".c").forEach(function (c) { c.remove(); });
+    var text = kod.textContent.split("\n")
+      .map(function (r) { return r.replace(/\s+$/, ""); })
+      .filter(function (r) { return r !== ""; })
+      .join("\n");
+    function hotovo() { b.textContent = "Skopírované ✓"; setTimeout(function () { b.textContent = "Kopírovať"; }, 1500); }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(hotovo);
+    } else {
+      var t = document.createElement("textarea");
+      t.value = text; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); hotovo(); } catch (e) {}
+      t.remove();
+    }
+  });
+  pre.appendChild(b);
+});
+</script>
+</body>
+</html>
