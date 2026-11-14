@@ -11,3 +11,13 @@ alebo `<title>`, popis z `<meta name="description">` alebo `<p class="lead">`).
 ```
 
 Server je dostupný aj v lokálnej sieti (port treba povoliť vo firewalle).
+
+## Ikona v paneli (Xfce)
+
+```
+python3 tray.py           # spustí server, otvorí prehliadač, pridá ikonu do panela
+```
+
+Ľavý klik na ikonu otvorí návody, pravý klik ponúkne menu (kopírovať adresu pre sieť,
+reštart, zastavenie). Záznam servera: `~/.cache/navody-server.log`.
+Odkaz na plochu: `~/Plocha/navody-server.desktop` (spúšťa `tray.py`).
