@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tri druhy hodín – 8 / 12 / 24</title>
+<style>
+  :root{
+    --bg1:#1b2040; --bg2:#3a2f6b; --bg3:#0d1226;
+    --card:rgba(255,255,255,.07); --cardb:rgba(255,255,255,.16);
+    --face:#232a52; --ink:#e8ecff; --muted:#a9b2e0;
+    --hour:#ffd9a0; --min:#e8ecff; --sec:#ff8fa3; --accent:#9db4ff; --ghost:#ffffff;
+    --glow:rgba(157,180,255,.35);
+  }
+  body[data-mode="work"]{
+    --bg1:#d8f0f2; --bg2:#a9d6e5; --bg3:#eaf7f1;
+    --card:rgba(255,255,255,.55); --cardb:rgba(255,255,255,.9);
+    --face:#fbfefe; --ink:#1f3b4d; --muted:#4d6f82;
+    --hour:#1f5f7a; --min:#2c8aa8; --sec:#e76f51; --accent:#2a9d8f; --ghost:#1f3b4d;
+    --glow:rgba(42,157,143,.3);
+  }
+  body[data-mode="family"]{
+    --bg1:#ffd6a5; --bg2:#ff9e9e; --bg3:#ffe8c7;
+    --card:rgba(255,248,240,.5); --cardb:rgba(255,255,255,.85);
+    --face:#fff8ef; --ink:#5a2d3c; --muted:#8a5a63;
+    --hour:#b5434f; --min:#d9694f; --sec:#6a4c93; --accent:#e07a5f; --ghost:#5a2d3c;
+    --glow:rgba(224,122,95,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    color:var(--ink);
+    background:linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+    background-attachment:fixed;
+    min-height:100vh; padding:28px 20px 40px;
+    transition:color .8s;
+    display:flex;flex-direction:column;align-items:center;gap:22px;
+  }
+  /* jemné dekorácie podľa režimu */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;opacity:.9;transition:opacity 1s;
+    background:
+      radial-gradient(circle at 15% 20%,var(--glow),transparent 35%),
+      radial-gradient(circle at 85% 80%,var(--glow),transparent 40%);
+  }
+  body[data-mode="night"]::after{
+    content:"";position:fixed;inset:0;pointer-events:none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 15%,#fff,transparent),
+      radial-gradient(1px 1px at 30% 70%,#fff,transparent),
+      radial-gradient(1.5px 1.5px at 55% 25%,#fff,transparent),
+      radial-gradient(1px 1px at 75% 55%,#fff,transparent),
+      radial-gradient(1.5px 1.5px at 90% 10%,#fff,transparent),
+      radial-gradient(1px 1px at 65% 90%,#fff,transparent),
+      radial-gradient(1px 1px at 20% 45%,#fff,transparent);
+    opacity:.7;
+  }
+  header{text-align:center;position:relative;z-index:1}
+  h1{margin:0;font-weight:300;font-size:clamp(1.5rem,3vw,2.3rem);letter-spacing:.04em}
+  .mode{margin-top:6px;color:var(--muted);font-size:1rem}
+  .mode b{color:var(--accent);font-weight:600}
+  .switch{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .switch button{
+    font:inherit;font-size:.85rem;cursor:pointer;color:var(--ink);
+    background:var(--card);border:1px solid var(--cardb);border-radius:999px;padding:6px 14px;
+    backdrop-filter:blur(8px);transition:.25s;
+  }
+  .switch button:hover{transform:translateY(-1px)}
+  .switch button.on{background:var(--accent);color:#fff;border-color:transparent}
+  main{
+    position:relative;z-index:1;width:100%;max-width:1240px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--cardb);border-radius:28px;
+    padding:22px 18px 20px;text-align:center;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 18px 50px -20px rgba(0,0,0,.35);
+  }
+  .card h2{margin:0;font-size:1.25rem;font-weight:600;letter-spacing:.03em}
+  .card .sub{font-size:.85rem;color:var(--muted);margin:2px 0 12px;min-height:1.2em}
+  svg{width:100%;height:auto;max-width:380px;display:block;margin:0 auto;overflow:visible}
+  .facebg{fill:var(--face);transition:fill .8s}
+  .rim{fill:none;stroke:var(--accent);stroke-width:1.6;opacity:.8}
+  .tick{stroke:var(--muted);stroke-width:.5;opacity:.7}
+  .major{stroke:var(--ink);stroke-width:1.6;opacity:.95}
+  .num{fill:var(--ink);text-anchor:middle;dominant-baseline:central;font-weight:500}
+  .h{stroke:var(--hour);stroke-linecap:round}
+  .m{stroke:var(--min);stroke-linecap:round}
+  .s{stroke:var(--sec);stroke-linecap:round}
+  .ghost{stroke:var(--ghost);stroke-width:2;stroke-dasharray:1 4;stroke-linecap:round;opacity:.55}
+  .hub{fill:var(--hour);stroke:var(--face);stroke-width:1.5}
+  .hubs{fill:var(--sec)}
+  .wedge{fill:var(--accent);opacity:.16}
+  .digital{font-size:1.6rem;font-weight:300;margin-top:14px;font-variant-numeric:tabular-nums;letter-spacing:.06em}
+  .info{margin-top:6px;font-size:.85rem;color:var(--muted);line-height:1.5}
+  .info b{color:var(--ink);font-weight:600}
+  .legend{position:relative;z-index:1;font-size:.82rem;color:var(--muted);text-align:center;max-width:700px;line-height:1.6}
+  .legend i{display:inline-block;width:22px;border-top:2px dotted var(--ghost);vertical-align:middle;margin-right:4px;opacity:.7}
+</style>
+</head>
+<body data-mode="night">
+
+<header>
+  <h1>Tri druhy hodín</h1>
+  <div class="mode" id="modeLabel"></div>
+  <div class="switch" id="switch">
+    <button data-m="auto" class="on">Automaticky</button>
+    <button data-m="night">Nočné</button>
+    <button data-m="work">Pracovné</button>
+    <button data-m="family">Rodinné</button>
+  </div>
+</header>
+
+<main id="clocks"></main>
+
+<div class="legend">
+  <i></i>bodkovaná ručička = kde by bola hodinová ručička na <b>štandardnom 12-hodinovom</b> ciferníku.
+  Výseč na ciferníku ukazuje, o koľko sa od štandardu líši.
+</div>
+
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const CLOCKS = [
+    { n: 8,  title: "8-hodinový cyklus",  sub: "Pracovná zmena – kruh sa uzavrie za 8 h",  big: 8 },
+    { n: 12, title: "12-hodinový cyklus", sub: "Štandardný ciferník (referencia)",         big: 12 },
+    { n: 24, title: "24-hodinový cyklus", sub: "Celý deň na jednom ciferníku",             big: 24 },
+  ];
+  const MODES = {
+    night:  "Nočné · 21:00 – 6:00",
+    work:   "Pracovné · 6:00 – 15:00",
+    family: "Rodinné · 15:00 – 21:00",
+  };
+  const MODE_ICON = { night: "🌙", work: "💼", family: "🏡" };
+
+  const el = (tag, attrs = {}, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const pol = (r, deg) => {
+    const a = (deg - 90) * Math.PI / 180;
+    return [r * Math.cos(a), r * Math.sin(a)];
+  };
+
+  const root = document.getElementById("clocks");
+
+  // --- stavba hodín ---
+  CLOCKS.forEach(c => {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `<h2>${c.title}</h2><div class="sub">${c.sub}</div>`;
+    const svg = el("svg", { viewBox: "-105 -105 210 210" }, card);
+
+    el("circle", { r: 101, class: "facebg" }, svg);
+    el("circle", { r: 101, class: "rim" }, svg);
+    c.wedge = el("path", { class: "wedge" }, svg);
+
+    // minútové značky
+    for (let i = 0; i < 60; i++) {
+      const [x1, y1] = pol(94, i * 6), [x2, y2] = pol(i % 5 ? 91 : 89, i * 6);
+      el("line", { x1, y1, x2, y2, class: "tick" }, svg);
+    }
+    // hodinové značky + čísla
+    const fs = c.n === 24 ? 8.5 : 12;
+    const rNum = c.n === 24 ? 76 : 74;
+    for (let i = 0; i < c.n; i++) {
+      const deg = i * 360 / c.n;
+      const [x1, y1] = pol(94, deg), [x2, y2] = pol(c.n === 24 ? 85 : 83, deg);
+      el("line", { x1, y1, x2, y2, class: "major" }, svg);
+      const [tx, ty] = pol(rNum, deg);
+      const t = el("text", { x: tx, y: ty, class: "num", "font-size": fs }, svg);
+      // 12h: 12 navrchu, ostatné: 0 navrchu
+      t.textContent = (c.n === 12 && i === 0) ? 12 : i;
+    }
+    // vnútorný nápis
+    const lab = el("text", { x: 0, y: 30, class: "num", "font-size": 7, opacity: .55 }, svg);
+    lab.textContent = c.n + " h";
+
+    c.ghost = el("line", { x1: 0, y1: 6, x2: 0, y2: -52, class: "ghost" }, svg);
+    c.hand  = el("line", { x1: 0, y1: 7, x2: 0, y2: -50, class: "h", "stroke-width": 4.6 }, svg);
+    c.min   = el("line", { x1: 0, y1: 10, x2: 0, y2: -78, class: "m", "stroke-width": 3 }, svg);
+    c.sec   = el("line", { x1: 0, y1: 16, x2: 0, y2: -84, class: "s", "stroke-width": 1.1 }, svg);
+    el("circle", { r: 4.6, class: "hub" }, svg);
+    el("circle", { r: 2, class: "hubs" }, svg);
+
+    c.digital = document.createElement("div"); c.digital.className = "digital";
+    c.info = document.createElement("div"); c.info.className = "info";
+    card.append(c.digital, c.info);
+    root.appendChild(card);
+  });
+
+  // --- režim pozadia ---
+  const label = document.getElementById("modeLabel");
+  let forced = "auto";
+  const modeFor = h => (h >= 21 || h < 6) ? "night" : (h < 15 ? "work" : "family");
+  document.getElementById("switch").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    forced = b.dataset.m;
+    [...e.currentTarget.children].forEach(x => x.classList.toggle("on", x === b));
+    tick();
+  });
+
+  const p2 = n => String(n).padStart(2, "0");
+  const wedgePath = (from, to) => { // výseč medzi dvoma uhlami (najkratší smer)
+    let d = ((to - from + 540) % 360) - 180;
+    if (Math.abs(d) < .3) return "";
+    const [x1, y1] = pol(50, from), [x2, y2] = pol(50, from + d);
+    return `M0 0L${x1} ${y1}A50 50 0 0 ${d > 0 ? 1 : 0} ${x2} ${y2}Z`;
+  };
+
+  function tick() {
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes();
+    const s = now.getSeconds() + now.getMilliseconds() / 1000;
+    const mm = m + s / 60;
+    const hrs = h + mm / 60;
+
+    const mode = forced === "auto" ? modeFor(h) : forced;
+    if (document.body.dataset.mode !== mode) document.body.dataset.mode = mode;
+    label.innerHTML = `${MODE_ICON[mode]} <b>${MODES[mode].split(" · ")[0]}</b> · ${MODES[mode].split(" · ")[1]}`;
+
+    const std = (hrs % 12) / 12 * 360;
+    CLOCKS.forEach(c => {
+      const a = (hrs % c.n) / c.n * 360;
+      c.hand.setAttribute("transform", `rotate(${a})`);
+      c.ghost.setAttribute("transform", `rotate(${std})`);
+      c.min.setAttribute("transform", `rotate(${mm * 6})`);
+      c.sec.setAttribute("transform", `rotate(${s * 6})`);
+      c.wedge.setAttribute("d", c.n === 12 ? "" : wedgePath(std, a));
+
+      const cyc = Math.floor(hrs / c.n);
+      const inCycle = hrs % c.n;
+      const diff = c.n === 12 ? 0 : ((a - std + 540) % 360) - 180;
+      c.digital.textContent = `${p2(h)}:${p2(m)}:${p2(Math.floor(s))}`;
+      c.info.innerHTML =
+        `ručička: <b>${a.toFixed(1)}°</b> · ${(360 / c.n).toFixed(0)}° za hodinu<br>` +
+        (c.n === 12
+          ? `pokrok cyklu: <b>${(inCycle / c.n * 100).toFixed(0)} %</b>`
+          : `oproti štandardu: <b>${diff >= 0 ? "+" : "−"}${Math.abs(diff).toFixed(1)}°</b> · cyklus: <b>${(inCycle / c.n * 100).toFixed(0)} %</b>`);
+    });
+  }
+  const loop = () => { tick(); requestAnimationFrame(loop); };
+  loop();
+})();
+</script>
+</body>
+</html>

@@ -9,17 +9,46 @@
 <body>
 <main>
   <h1>Návody</h1>
-  <p class="lead">Prehľad návodov v tomto adresári.</p>
-  <div class="cards">
-    <a class="card" href="github-prepojenie.html">
-      <strong>Prepojenie GitHubu s Claude Code</strong>
-      <span>Ako pripojiť GitHub účet a naklonovať projekt do cloudovej relácie.</span>
-    </a>
-    <a class="card" href="mx-linux-vscode-dotnet.html">
-      <strong>VS Code a .NET na MX Linuxe</strong>
-      <span>Pridanie repozitárov Microsoftu a inštalácia Visual Studio Code a .NET SDK.</span>
-    </a>
+  <p class="lead">Prehľad návodov v tomto adresári. Zoznam sa vytvára automaticky zo všetkých HTML súborov.</p>
+  <div class="cards" id="zoznam">
+    <p class="muted">Načítavam…</p>
   </div>
 </main>
+<script>
+(function () {
+  var box = document.getElementById("zoznam");
+
+  function karta(n) {
+    var a = document.createElement("a");
+    a.className = "card";
+    a.href = encodeURI(n.subor);
+    var s = document.createElement("strong");
+    s.textContent = n.nadpis;
+    a.appendChild(s);
+    var span = document.createElement("span");
+    span.textContent = n.popis || n.subor;
+    a.appendChild(span);
+    return a;
+  }
+
+  fetch("zoznam.json", { cache: "no-store" })
+    .then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(function (data) {
+      box.textContent = "";
+      if (!data.length) {
+        box.innerHTML = "<p>V adresári zatiaľ nie sú žiadne návody.</p>";
+        return;
+      }
+      data.forEach(function (n) { box.appendChild(karta(n)); });
+    })
+    .catch(function () {
+      box.innerHTML = '<div class="note">Zoznam návodov sa nepodarilo načítať. ' +
+        'Stránku otvorte cez server spustený príkazom <code>./spusti_server.sh</code>.</div>';
+    });
+})();
+</script>
 </body>
 </html>

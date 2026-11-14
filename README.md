@@ -1,9 +1,8 @@
 # Návody
 
-HTML návody:
-
-- [Prepojenie GitHubu s Claude Code](github-prepojenie.html)
-- [VS Code a .NET na MX Linuxe](mx-linux-vscode-dotnet.html)
+HTML návody v tomto adresári. `index.html` zobrazuje zoznam automaticky –
+nový návod stačí uložiť ako `.html` súbor do adresára (nadpis sa berie z `<h1>`
+alebo `<title>`, popis z `<meta name="description">` alebo `<p class="lead">`).
 
 ## Spustenie lokálne
 
