@@ -44,12 +44,6 @@
   .box pre { background: var(--card); }
   .box .note { background: var(--card); }
 
-  /* Na širokej obrazovke dva stĺpce boxov, kroky vedľa seba. */
-  @media (min-width: 1100px) {
-    .boxes { column-count: 2; column-gap: 20px; }
-    .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
-    .steps .step { margin: 0; }
-  }
   .steps { margin: 12px 0; }
   .toc { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 16px 0 8px; padding: 0; list-style: none; }
   .toc li { margin: 0; }
