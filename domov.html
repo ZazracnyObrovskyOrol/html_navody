@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Offline úvodná stránka v jednom súbore – odkazy na služby v sieti a záložky, kontrola dostupnosti a úpravy priamo na stránke. Funguje aj bez servera.">
+<title>Domov</title>
+<style>
+:root{
+  --bg:#0d1117; --bg2:#121826; --panel:#161c27; --panel2:#1d2533; --line:#283143;
+  --text:#e7eaf0; --muted:#8d97ab; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
+  --ok:#3ecf8e; --bad:#f06464; --unk:#5b6476; --shadow:0 10px 30px -12px rgba(0,0,0,.55);
+  --ico-bg:#e8ecf3; --ico-pad:4px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f3f5f9; --bg2:#e9eef6; --panel:#ffffff; --panel2:#f2f5fa; --line:#dfe4ec;
+    --text:#1a2030; --muted:#667085; --accent:#2563eb; --accent-soft:rgba(37,99,235,.10);
+    --unk:#b5bccb; --shadow:0 10px 30px -14px rgba(20,30,60,.25);
+    --ico-bg:transparent; --ico-pad:0;
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f3f5f9; --bg2:#e9eef6; --panel:#ffffff; --panel2:#f2f5fa; --line:#dfe4ec;
+  --text:#1a2030; --muted:#667085; --accent:#2563eb; --accent-soft:rgba(37,99,235,.10);
+  --unk:#b5bccb; --shadow:0 10px 30px -14px rgba(20,30,60,.25);
+    --ico-bg:transparent; --ico-pad:0;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{
+  min-height:100vh;color:var(--text);
+  font:15px/1.45 "Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  background:radial-gradient(1200px 600px at 10% -10%,var(--accent-soft),transparent 60%),
+             radial-gradient(900px 500px at 110% 10%,rgba(62,207,142,.08),transparent 60%),var(--bg);
+  background-attachment:fixed;
+}
+button,input,select{font:inherit;color:inherit}
+a{color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:22px 16px 90px}
+
+/* ---------- hlavička ---------- */
+.hero{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}
+.greet small{display:block;color:var(--muted);font-size:.9rem;margin-bottom:2px}
+.greet h1{margin:0;font-size:clamp(1.6rem,3.4vw,2.2rem);font-weight:650;letter-spacing:-.01em}
+.clock{text-align:right}
+.clock b{display:block;font-size:clamp(1.8rem,4vw,2.6rem);font-weight:300;font-variant-numeric:tabular-nums;line-height:1}
+.clock span{color:var(--muted);font-size:.9rem}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.search{position:relative;flex:1 1 320px}
+.search input{
+  width:100%;padding:13px 44px 13px 44px;border-radius:14px;border:1px solid var(--line);
+  background:var(--panel);box-shadow:var(--shadow);outline:none;font-size:1rem;
+}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.search .ico-s{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search input:not(:placeholder-shown)~kbd{display:none}
+.search kbd{position:absolute;right:12px;top:50%;transform:translateY(-50%);font:12px ui-monospace,monospace;
+  color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 7px;background:var(--panel2)}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:10px 14px;border-radius:12px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel);transition:border-color .15s,background .15s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--bad)}
+.btn.danger:hover{border-color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.icon{padding:10px 12px}
+.status-chip .d{width:9px;height:9px;border-radius:50%;background:var(--unk)}
+.status-chip .d.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.status-chip .d.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.status-chip small{color:var(--muted)}
+
+.filters{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:8px;scrollbar-width:thin}
+.filters button{
+  flex:none;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:transparent;
+  color:var(--muted);cursor:pointer;font-size:.88rem;
+}
+.filters button:hover{color:var(--text)}
+.filters button.on{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:600}
+
+.banner{padding:12px 14px;border-radius:12px;margin-bottom:14px;background:var(--accent-soft);border:1px solid var(--line);font-size:.92rem}
+.banner.err{background:rgba(240,100,100,.12)}
+
+/* ---------- sekcie a skupiny ---------- */
+.section{margin-top:22px}
+.shead{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.shead h2{margin:0;font-size:.8rem;text-transform:uppercase;letter-spacing:.16em;color:var(--muted);font-weight:600}
+.shead .line{flex:1;height:1px;background:var(--line)}
+.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:16px;align-items:start}
+.sec-kompaktne .groups{grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
+.group{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}
+.group.sub .tile{background:var(--panel)}
+.group.sub{background:var(--panel2);box-shadow:none;border-radius:14px;padding:10px;margin-top:6px;grid-column:1/-1}
+.ghead{display:flex;align-items:center;gap:8px;margin:0 2px 10px}
+.ghead h3{margin:0;font-size:1rem;font-weight:650;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.group.sub .ghead h3{font-size:.85rem;color:var(--muted);font-weight:600}
+.ghead .count{font-size:.75rem;color:var(--muted)}
+.gbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;min-height:10px}
+.sec-kompaktne .gbody{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+
+.tile{
+  position:relative;display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;
+  text-decoration:none;border:1px solid transparent;background:var(--panel2);min-width:0;
+  transition:border-color .15s,transform .15s,background .15s;
+}
+.tile:hover{border-color:var(--accent);transform:translateY(-1px)}
+.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sec-kompaktne .tile{padding:7px 9px;gap:8px;background:transparent;border-color:var(--line)}
+.txt{min-width:0;display:flex;flex-direction:column}
+.nm{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ds{font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sec-kompaktne .nm{font-weight:500;font-size:.88rem}
+
+.ico{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;overflow:hidden;font-size:20px}
+.ico img{width:100%;height:100%;object-fit:contain}
+.ico:has(img){background:var(--ico-bg);padding:var(--ico-pad)}
+.ico.ph{color:#fff;font-weight:700;font-size:.85rem;letter-spacing:.02em}
+.sec-kompaktne .ico{width:24px;height:24px;border-radius:7px;font-size:14px}
+.sec-kompaktne .ico.ph{font-size:.62rem}
+.sec-kompaktne .ico svg{width:15px;height:15px}
+
+.dot{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--unk)}
+.dot.up{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+.dot.down{background:var(--bad);box-shadow:0 0 6px var(--bad)}
+.dot.chk{background:var(--unk);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.3}}
+.tile.is-down .ico{filter:grayscale(.8);opacity:.6}
+
+.empty{color:var(--muted);font-size:.85rem;padding:8px 4px}
+.none{text-align:center;color:var(--muted);padding:40px 10px}
+.none a{color:var(--accent)}
+
+.frequent .gbody{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+
+/* ---------- režim úprav ---------- */
+.ctl{display:none;gap:4px}
+body.editing .ctl{display:flex}
+.mini{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:3px 8px;cursor:pointer;font-size:.8rem;color:var(--muted)}
+.mini:hover{color:var(--text);border-color:var(--accent)}
+body.editing .tile{border-style:dashed;border-color:var(--line);cursor:grab}
+body.editing .tile::after{content:"✎";position:absolute;right:8px;bottom:6px;font-size:.75rem;color:var(--muted)}
+body.editing .tile .dot{display:none}
+.tile.dragging{opacity:.35}
+.tile.drop-before{box-shadow:-3px 0 0 var(--accent)}
+.gbody.drop-in{outline:2px dashed var(--accent);outline-offset:4px;border-radius:10px}
+.add-tile{display:none;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:12px;
+  padding:10px;color:var(--muted);cursor:pointer;background:transparent;font-size:.85rem}
+body.editing .add-tile{display:flex}
+.add-tile:hover{color:var(--accent);border-color:var(--accent)}
+.editbar{
+  position:fixed;left:50%;bottom:16px;transform:translateX(-50%) translateY(140%);z-index:20;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px;box-shadow:var(--shadow);
+  transition:transform .25s ease;max-width:calc(100% - 24px);
+}
+body.editing .editbar{transform:translateX(-50%) translateY(0)}
+.editbar .saved{font-size:.85rem;color:var(--muted);min-width:90px}
+.editbar .saved.err{color:var(--bad)}
+
+/* ---------- dialógy ---------- */
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--text);padding:0;
+  width:min(520px,calc(100% - 24px));box-shadow:0 30px 80px -20px rgba(0,0,0,.6)}
+dialog::backdrop{background:rgba(5,8,15,.55);backdrop-filter:blur(3px)}
+.dlg-h{display:flex;align-items:center;gap:12px;padding:18px 20px 6px}
+.dlg-h h2{margin:0;font-size:1.15rem;flex:1}
+.dlg-b{padding:8px 20px 4px;display:grid;gap:12px}
+.dlg-f{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px 18px;flex-wrap:wrap}
+.dlg-f .spacer{flex:1}
+label.f{display:grid;gap:5px;font-size:.85rem;color:var(--muted)}
+label.f input,label.f select{
+  width:100%;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:.95rem;outline:none;
+}
+label.f input:focus,label.f select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.dlg-b>*,.row2>*{min-width:0}
+.hint{font-size:.78rem;color:var(--muted);margin:-6px 0 0}
+.hint a{color:var(--accent)}
+.inline{display:flex;gap:6px}
+.inline input{flex:1;min-width:0}
+.inline .mini{flex:none}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+label.chk{display:flex;align-items:center;gap:10px;font-size:.92rem}
+.err-msg{color:var(--bad);font-size:.85rem;margin:0}
+
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:30;display:flex;gap:12px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);font-size:.92rem}
+.toast button{border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0}
+
+@media (max-width:600px){
+  .clock{text-align:left}
+  .gbody{grid-template-columns:repeat(auto-fill,minmax(135px,1fr))}
+  .row2{grid-template-columns:1fr}
+  .btn .lbl{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="greet"><small id="greeting"></small><h1 id="title">Domov</h1></div>
+    <div class="clock"><b id="time"></b><span id="date"></span></div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg class="ico-s" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Hľadať odkaz… (Enter otvorí prvý výsledok)" autocomplete="off" spellcheck="false">
+      <kbd>/</kbd>
+    </div>
+    <button class="btn status-chip" id="bStatus" title="Znova skontrolovať dostupnosť"><span class="d" id="stDot"></span><span id="stText">Kontrolujem…</span></button>
+    <button class="btn" id="bEdit"><span>✎</span><span class="lbl">Upraviť</span></button>
+    <button class="btn icon" id="bSettings" title="Nastavenia">⚙</button>
+  </div>
+
+  <div id="banner"></div>
+  <nav class="filters" id="filters"></nav>
+  <main id="app"></main>
+</div>
+
+<div class="editbar">
+  <span>Režim úprav · položky môžeš presúvať myšou</span>
+  <span class="saved" id="saved"></span>
+  <button class="btn" id="bUndo">↶ Späť</button>
+  <button class="btn primary" id="bDone">Hotovo</button>
+</div>
+
+<!-- Vlastné odkazy: súbor odkazy.js vedľa stránky (ODKAZY = {...}). Ak chýba, zobrazí sa ukážka. -->
+<script src="odkazy.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* ================= pomocné ================= */
+const $ = s => document.querySelector(s);
+const S = v => v == null ? '' : String(v);
+function el(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) e.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return e;
+}
+const norm = s => S(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const isGroup = n => Array.isArray(n.polozky);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+};
+function safeHref(h) {
+  h = S(h).trim();
+  if (!h || /^\s*(javascript|data|vbscript):/i.test(h)) return null;
+  return h;
+}
+function hostOf(url) { try { return new URL(url).host; } catch (e) { return ''; } }
+
+/* ================= stav ================= */
+const DEFAULTS = { nazov: 'Domov', novaKarta: true, tema: 'auto', kontrolaSekundy: 60 };
+let data = null, example = false, editMode = false;
+let filter = store.get('domov-filter', '*');
+const usage = store.get('domov-pouzitie', {});
+const status = new Map();
+const history = [];
+
+/* ================= načítanie a ukladanie ================= */
+// Úpravy sa ukladajú v prehliadači (localStorage). Počiatočné dáta sú z odkazy.js.
+const KEY = 'domov-odkazy', SRCKEY = 'domov-zdroj';
+const EXAMPLE = {
+  nastavenia: { nazov: 'Domov' },
+  sekcie: [
+    { nazov: 'Služby', styl: 'karty', skupiny: [{ nazov: 'Domáca sieť', polozky: [
+      { nazov: 'Router', ikona: 'mikrotik', url: 'http://192.168.1.1', popis: 'hlavný router', kontrola: '192.168.1.1' },
+      { nazov: 'Home Assistant', ikona: 'home-assistant', url: 'http://192.168.1.20:8123', kontrola: 'http://192.168.1.20:8123' },
+      { nazov: 'Kamery', polozky: [{ nazov: 'Dvor', ikona: 'mdi-cctv', url: 'http://192.168.1.31', kontrola: '192.168.1.31' }] }
+    ] }] },
+    { nazov: 'Záložky', styl: 'kompaktne', skupiny: [{ nazov: 'Web', polozky: [
+      { nazov: 'GitHub', ikona: 'github', url: 'https://github.com/' },
+      { nazov: 'YouTube', ikona: 'youtube', url: 'https://youtube.com/' },
+      { nazov: 'SHMÚ', skratka: 'SH', url: 'https://www.shmu.sk/' }
+    ] }] }
+  ]
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+function hashOf(o) { let h = 0; for (const c of JSON.stringify(o)) h = (h * 31 + c.charCodeAt(0)) | 0; return String(h); }
+function fileData() {
+  const d = window.ODKAZY;
+  return d && typeof d === 'object' && Array.isArray(d.sekcie) ? d : null;
+}
+function normalize() {
+  data.nastavenia = Object.assign({}, DEFAULTS, data.nastavenia);
+  if (!Array.isArray(data.sekcie)) data.sekcie = [];
+}
+function load() {
+  const fromFile = fileData();
+  const saved = store.get(KEY, null);
+  if (saved && Array.isArray(saved.sekcie)) {
+    data = saved;
+    if (fromFile && store.get(SRCKEY, null) !== hashOf(fromFile)) {
+      showBanner('Súbor <b>odkazy.js</b> sa zmenil od posledného načítania. V prehliadači máš uloženú inú verziu odkazov.', false, [
+        ['Načítať z odkazy.js', () => reloadFromFile()],
+        ['Ponechať verziu z prehliadača', () => { store.set(SRCKEY, hashOf(fromFile)); showBanner(''); }]
+      ]);
+    }
+  } else if (fromFile) {
+    data = clone(fromFile);
+    store.set(SRCKEY, hashOf(fromFile));
+  } else {
+    data = clone(EXAMPLE);
+    example = true;
+    showBanner('Zobrazuje sa ukážka. Odkazy pridaj cez <b>✎ Upraviť</b> alebo ich importuj v nastaveniach (⚙). ' +
+      'Natrvalo ich ulož ako súbor <b>odkazy.js</b> vedľa tejto stránky (⚙ → Stiahnuť odkazy.js).');
+  }
+  normalize();
+  if (!store.set('domov-test', 1)) showBanner('Prehliadač neumožňuje ukladanie – zmeny sa po zatvorení stratia. Použi ⚙ → Stiahnuť odkazy.js.', true);
+}
+function reloadFromFile() {
+  const fromFile = fileData();
+  if (!fromFile) { toast('Súbor odkazy.js sa nenašiel.'); return; }
+  mutate(() => { data = clone(fromFile); normalize(); });
+  store.set(SRCKEY, hashOf(fromFile));
+  showBanner('');
+  toast('Odkazy načítané z odkazy.js.', 'Vrátiť', undo);
+  checkStatus();
+}
+
+function setSaved(text, err) { const s = $('#saved'); s.textContent = text; s.classList.toggle('err', !!err); }
+function save() {
+  if (store.set(KEY, data)) {
+    setSaved('✓ Uložené v prehliadači');
+    if (example) { example = false; }
+  } else setSaved('Neuložené – použi Stiahnuť odkazy.js', true);
+}
+function mutate(fn) {
+  history.push(JSON.stringify(data));
+  if (history.length > 50) history.shift();
+  fn();
+  save();
+  render();
+}
+function undo() {
+  const h = history.pop();
+  if (!h) { toast('Nie je čo vrátiť.'); return; }
+  data = JSON.parse(h);
+  save(); render(); toast('Posledná zmena vrátená.');
+}
+
+/* ================= ikony ================= */
+// vlastné ikony pre mdi-* (bez závislosti na emoji písme)
+const SVG_ICONS = {
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  cctv: '<path d="M3 7l13 4-2 4-11-4z"/><path d="M16 11l3-1 1 3-3 1"/><path d="M7 12v5H4"/>',
+  camera: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7l2-3h4l2 3"/><circle cx="12" cy="13.5" r="3.5"/>',
+  server: '<rect x="4" y="4" width="16" height="7" rx="1.5"/><rect x="4" y="13" width="16" height="7" rx="1.5"/><path d="M8 7.5h.01M8 16.5h.01"/>',
+  router: '<rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 16.5h.01M11 16.5h.01M17 13V8"/><path d="M14 6a4 4 0 0 1 6 0"/>',
+  home: '<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>',
+  database: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
+  thermometer: '<path d="M14 14.5V5a2 2 0 0 0-4 0v9.5a4 4 0 1 0 4 0z"/>',
+  lightbulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  water: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+};
+function svgIcon(name) {
+  const d = SVG_ICONS[name] || SVG_ICONS.link;
+  const span = el('span', {});
+  span.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  return span.firstChild;
+}
+// ikony z dashboardicons.com – po prvom načítaní sa uložia v prehliadači a fungujú offline
+const ICON_CDN = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/';
+const iconCache = store.get('domov-ikony', {}) || {};
+const failedIcons = new Set();
+let iconTimer = null;
+function saveIcons() { clearTimeout(iconTimer); iconTimer = setTimeout(() => store.set('domov-ikony', iconCache), 800); }
+function hue(s) { let h = 0; for (const c of S(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 45% 45%)`; }
+function iconEl(it) {
+  const box = el('span', { class: 'ico' });
+  const avatar = () => {
+    box.replaceChildren(); box.className = 'ico ph'; box.style.background = hue(it.nazov);
+    box.textContent = it.skratka ? it.skratka.slice(0, 3) : S(it.nazov || '?').slice(0, 1).toUpperCase();
+  };
+  const ic = S(it.ikona).trim();
+  let src = null;
+  if (!ic) { avatar(); return box; }
+  if (ic.startsWith('mdi-')) { box.className = 'ico ph'; box.style.background = hue(it.nazov); box.append(svgIcon(ic.slice(4))); return box; }
+  if (/[^\x00-\x7F]/.test(ic) && ic.length <= 8) { box.textContent = ic; return box; }
+  const isUrl = /^https?:\/\//i.test(ic);
+  if (!isUrl && !/^[a-z0-9][a-z0-9._-]*$/i.test(ic)) { avatar(); return box; }
+  const key = isUrl ? ic : ic.toLowerCase().replace(/\.(png|svg|webp)$/, '');
+  if (iconCache[key]) { box.append(el('img', { alt: '', draggable: 'false', src: iconCache[key] })); return box; }
+  if (failedIcons.has(key)) { avatar(); return box; }
+  src = isUrl ? ic : ICON_CDN + key + '.png';
+  const img = el('img', { alt: '', draggable: 'false' });
+  img.crossOrigin = 'anonymous';
+  img.onerror = () => {
+    // cudzí server bez CORS: zobraziť aspoň bez uloženia do cache
+    if (isUrl && img.crossOrigin) { img.removeAttribute('crossorigin'); img.src = src; return; }
+    failedIcons.add(key); avatar();
+  };
+  img.onload = () => {
+    if (!img.crossOrigin) return;
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const w = img.naturalWidth || 64, h = img.naturalHeight || 64, r = Math.min(64 / w, 64 / h);
+      c.getContext('2d').drawImage(img, (64 - w * r) / 2, (64 - h * r) / 2, w * r, h * r);
+      iconCache[key] = c.toDataURL('image/png'); saveIcons();
+    } catch (e) {}
+  };
+  img.src = src;
+  box.append(img);
+  return box;
+}
+
+/* ================= kontrola dostupnosti ================= */
+function allItems(nodes = null, out = [], path = []) {
+  if (!nodes) { data.sekcie.forEach(s => allItems(s.skupiny || [], out, [s.nazov])); return out; }
+  for (const n of nodes) {
+    if (isGroup(n)) allItems(n.polozky, out, path.concat(n.nazov));
+    else out.push({ it: n, path });
+  }
+  return out;
+}
+// Prehliadač skúsi adresu načítať (no-cors). Odpoveď = online, chyba/časový limit = nedostupné.
+async function probe(target) {
+  const url = /^https?:\/\//i.test(target) ? target : 'http://' + target;
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 4000);
+  try { await fetch(url, { mode: 'no-cors', cache: 'no-store', credentials: 'omit', signal: c.signal }); return true; }
+  catch (e) { return false; }
+  finally { clearTimeout(t); }
+}
+let checking = false;
+async function checkStatus() {
+  if (checking) return;
+  const targets = [...new Set(allItems().map(x => S(x.it.kontrola).trim()).filter(Boolean))];
+  if (!targets.length) { updateSummary(); return; }
+  checking = true;
+  targets.forEach(t => { if (!status.has(t)) status.set(t, 'chk'); });
+  paintDots(); updateSummary(true);
+  let i = 0;
+  const worker = async () => {
+    while (i < targets.length) {
+      const t = targets[i++];
+      status.set(t, await probe(t) ? 'up' : 'down');
+      paintDots();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, targets.length) }, worker));
+  checking = false;
+  paintDots(); updateSummary();
+}
+function paintDots() {
+  document.querySelectorAll('.tile[data-mon]').forEach(t => {
+    const st = status.get(t.dataset.mon) || 'unk';
+    const d = t.querySelector('.dot');
+    if (d) { d.className = 'dot ' + st; d.title = { up: 'Online', down: 'Nedostupné', chk: 'Kontrolujem…', unk: 'Neznámy stav' }[st]; }
+    t.classList.toggle('is-down', st === 'down');
+  });
+}
+function updateSummary(busy) {
+  const vals = [...new Set(allItems().map(x => S(x.it.kontrola).trim()).filter(Boolean))].map(t => status.get(t));
+  const up = vals.filter(v => v === 'up').length, down = vals.filter(v => v === 'down').length;
+  const dot = $('#stDot'), txt = $('#stText');
+  if (!vals.length) { dot.className = 'd'; txt.textContent = 'Bez kontroly'; return; }
+  if (busy) { dot.className = 'd'; txt.textContent = 'Kontrolujem…'; return; }
+  dot.className = 'd ' + (down ? 'bad' : up ? 'ok' : '');
+  txt.replaceChildren(`${up} online`, down ? el('small', { text: ` · ${down} nedostupné` }) : '');
+}
+let monTimer = null;
+function restartMonitor() {
+  clearInterval(monTimer);
+  const sec = Number(data.nastavenia.kontrolaSekundy) || 0;
+  if (sec > 0) monTimer = setInterval(() => { if (!document.hidden) checkStatus(); }, Math.max(15, sec) * 1000);
+}
+
+/* ================= vykreslenie ================= */
+let refs = new Map(), rid = 0;
+const reg = (node, arr) => { const id = 'n' + (++rid); refs.set(id, { node, arr }); return id; };
+const app = $('#app');
+
+function tileEl(it, arr, path, opts = {}) {
+  const id = opts.noRef ? null : reg(it, arr);
+  const href = safeHref(it.url);
+  const mon = S(it.kontrola).trim();
+  const desc = it.popis || hostOf(it.url);
+  const a = el('a', {
+    class: 'tile', href: href || null, 'data-id': id, 'data-mon': mon || null,
+    target: data.nastavenia.novaKarta ? '_blank' : null, rel: 'noopener noreferrer',
+    draggable: editMode && id ? 'true' : null, title: it.url || '',
+    'data-search': norm([path.join(' '), it.nazov, it.popis, it.url].join(' '))
+  }, iconEl(it), el('span', { class: 'txt' }, el('span', { class: 'nm', text: it.nazov }), desc ? el('span', { class: 'ds', text: desc }) : null),
+     mon ? el('span', { class: 'dot ' + (status.get(mon) || 'unk') }) : null);
+  a.addEventListener('click', e => {
+    if (editMode) { e.preventDefault(); if (id) editItem(it, arr); return; }
+    if (!href) { e.preventDefault(); return; }
+    usage[href] = (usage[href] || 0) + 1; store.set('domov-pouzitie', usage);
+  });
+  return a;
+}
+
+function groupEl(g, arr, path, depth) {
+  const id = reg(g, arr);
+  const p = path.concat(g.nazov);
+  const body = el('div', { class: 'gbody', 'data-group': id });
+  const subs = [];
+  for (const n of g.polozky) {
+    if (isGroup(n)) subs.push(groupEl(n, g.polozky, p, depth + 1));
+    else body.append(tileEl(n, g.polozky, p));
+  }
+  body.append(el('button', { class: 'add-tile', type: 'button', text: '＋ Pridať odkaz', onclick: () => editItem(null, g.polozky) }));
+  const items = g.polozky.filter(n => !isGroup(n)).length;
+  const mini = (t, title, fn) => el('button', { class: 'mini', type: 'button', title, 'aria-label': title, text: t, onclick: fn });
+  const head = el('div', { class: 'ghead' },
+    el('h3', { text: g.nazov }),
+    el('span', { class: 'count', text: items ? String(items) : '' }),
+    el('span', { class: 'ctl' },
+      depth === 0 ? mini('▤', 'Pridať podskupinu', () => addGroup(g.polozky, 'podskupinu')) : null,
+      mini('↑', 'Posunúť vyššie', () => move(id, -1)),
+      mini('↓', 'Posunúť nižšie', () => move(id, 1)),
+      mini('✎', 'Premenovať', () => renameGroup(g)),
+      mini('🗑', 'Zmazať skupinu', () => deleteGroup(id))));
+  return el('section', { class: 'group' + (depth ? ' sub' : ''), 'data-gname': norm(p[1] || g.nazov) }, head, body, subs);
+}
+
+function frequentEl() {
+  const items = allItems().filter(x => safeHref(x.it.url) && (usage[safeHref(x.it.url)] || 0) >= 2);
+  const seen = new Set();
+  const top = items.sort((a, b) => usage[safeHref(b.it.url)] - usage[safeHref(a.it.url)])
+    .filter(x => !seen.has(x.it.url) && seen.add(x.it.url)).slice(0, 6);
+  if (!top.length) return null;
+  const body = el('div', { class: 'gbody' }, top.map(x => tileEl(x.it, null, x.path, { noRef: true })));
+  return el('div', { class: 'section frequent', id: 'frequent' },
+    el('div', { class: 'shead' }, el('h2', { text: 'Často používané' }), el('span', { class: 'line' })),
+    el('div', { class: 'group' }, body));
+}
+
+function render() {
+  refs = new Map(); rid = 0;
+  const st = data.nastavenia;
+  document.documentElement.dataset.theme = st.tema === 'auto' ? '' : st.tema;
+  if (st.tema === 'auto') document.documentElement.removeAttribute('data-theme');
+  document.title = st.nazov; $('#title').textContent = st.nazov;
+  document.body.classList.toggle('editing', editMode);
+  $('#bEdit').classList.toggle('primary', editMode);
+  $('#bUndo').disabled = !history.length;
+
+  // filtre
+  const names = [];
+  data.sekcie.forEach(s => (s.skupiny || []).forEach(g => names.push(g.nazov)));
+  if (filter !== '*' && !names.some(n => norm(n) === filter)) filter = '*';
+  $('#filters').replaceChildren(
+    ...[['*', 'Všetko']].concat(names.map(n => [norm(n), n])).map(([k, label]) =>
+      el('button', { type: 'button', class: k === filter ? 'on' : '', text: label,
+        onclick: () => { filter = k; store.set('domov-filter', k); render(); } })));
+
+  app.replaceChildren();
+  if (!editMode) { const f = frequentEl(); if (f && filter === '*') app.append(f); }
+  data.sekcie.forEach(sec => {
+    sec.skupiny = sec.skupiny || [];
+    const grid = el('div', { class: 'groups' });
+    sec.skupiny.forEach(g => grid.append(groupEl(g, sec.skupiny, [sec.nazov], 0)));
+    if (!sec.skupiny.length) grid.append(el('div', { class: 'empty', text: 'Zatiaľ prázdne – v režime úprav pridaj skupinu.' }));
+    app.append(el('div', { class: 'section sec-' + (sec.styl || 'karty') },
+      el('div', { class: 'shead' }, el('h2', { text: sec.nazov }), el('span', { class: 'line' }),
+        el('span', { class: 'ctl' }, el('button', { class: 'mini', type: 'button', text: '＋ Skupina', onclick: () => addGroup(sec.skupiny, 'skupinu') }))),
+      grid));
+  });
+  app.append(el('div', { class: 'none', id: 'none', hidden: true }));
+  applyFilter();
+  paintDots();
+}
+
+function applyFilter() {
+  const q = norm($('#q').value.trim());
+  let shown = 0;
+  document.querySelectorAll('#app .section:not(.frequent) > .groups > .group').forEach(g => {
+    const groupOk = filter === '*' || g.dataset.gname === filter;
+    let any = false;
+    g.querySelectorAll('.tile').forEach(t => {
+      const ok = groupOk && (!q || t.dataset.search.includes(q));
+      t.hidden = !ok; if (ok) { any = true; shown++; }
+    });
+    g.querySelectorAll('.group.sub').forEach(sg => { sg.hidden = !!q && !sg.querySelector('.tile:not([hidden])'); });
+    g.hidden = !groupOk || (!!q && !any);
+  });
+  document.querySelectorAll('#app .section:not(.frequent)').forEach(s => {
+    const g = s.querySelectorAll('.groups > .group');
+    s.hidden = g.length > 0 && [...g].every(x => x.hidden) && !editMode;
+  });
+  const fr = $('#frequent'); if (fr) fr.hidden = !!q;
+  const none = $('#none');
+  none.hidden = !q || shown > 0;
+  if (!none.hidden) none.replaceChildren('Nič sa nenašlo pre „' + $('#q').value.trim() + '“. ',
+    el('a', { href: 'https://www.google.com/search?q=' + encodeURIComponent($('#q').value.trim()), target: '_blank', rel: 'noopener', text: 'Hľadať na webe →' }));
+}
+
+/* ================= úpravy ================= */
+function allGroups() {
+  const out = [];
+  const walk = (arr, path) => arr.forEach(n => { if (isGroup(n)) { out.push({ g: n, label: path.concat(n.nazov).join(' › ') }); walk(n.polozky, path.concat(n.nazov)); } });
+  data.sekcie.forEach(s => walk(s.skupiny || [], [s.nazov]));
+  return out;
+}
+
+function dialog(title, body, buttons) {
+  const d = el('dialog', {});
+  const foot = el('div', { class: 'dlg-f' });
+  buttons.forEach(b => foot.append(b === 'spacer' ? el('span', { class: 'spacer' })
+    : el('button', { type: 'button', class: 'btn ' + (b.cls || ''), text: b.label, onclick: () => { if (b.fn && b.fn() === false) return; d.close(); } })));
+  d.append(el('div', { class: 'dlg-h' }, el('h2', { text: title })), el('div', { class: 'dlg-b' }, body), foot);
+  d.addEventListener('close', () => d.remove());
+  d.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') { e.preventDefault(); foot.querySelector('.primary')?.click(); } });
+  document.body.append(d); d.showModal();
+  return d;
+}
+const field = (label, input, hint) => [el('label', { class: 'f' }, label, input), hint ? el('p', { class: 'hint' }, hint) : null];
+const input = (val, ph) => { const i = el('input', { type: 'text', placeholder: ph || '', autocomplete: 'off', spellcheck: 'false' }); i.value = S(val); return i; };
+
+function editItem(it, arr) {
+  const isNew = !it;
+  const v = it ? { ...it } : { nazov: '', url: '' };
+  const f = { nazov: input(v.nazov, 'napr. Proxmox'), url: input(v.url, 'http://192.168.1.10:8006'),
+    ikona: input(v.ikona, 'proxmox, 🔗 alebo URL obrázka'), skratka: input(v.skratka, 'XM'),
+    popis: input(v.popis, 'krátky popis'), kontrola: input(v.kontrola, 'URL alebo IP adresa') };
+  const preview = el('span', {});
+  const refreshPreview = () => preview.replaceChildren(iconEl({ nazov: f.nazov.value || '?', ikona: f.ikona.value.trim(), skratka: f.skratka.value.trim() }));
+  [f.nazov, f.ikona, f.skratka].forEach(i => i.addEventListener('input', refreshPreview));
+  refreshPreview();
+  const fromUrl = el('button', { type: 'button', class: 'mini', text: 'podľa odkazu', title: 'Kontrolovať adresu z odkazu',
+    onclick: () => { try { const u = new URL(f.url.value.trim()); f.kontrola.value = u.origin; } catch (e) { toast('Najprv vyplň platný odkaz.'); } } });
+  const groups = allGroups();
+  const sel = el('select', {});
+  groups.forEach((g, i) => sel.append(el('option', { value: i, text: g.label })));
+  const curIdx = groups.findIndex(g => g.g.polozky === arr);
+  sel.value = String(Math.max(0, curIdx));
+  const err = el('p', { class: 'err-msg', hidden: true });
+
+  const body = [
+    ...field('Názov', f.nazov),
+    ...field('Odkaz', f.url),
+    el('div', { class: 'row2' },
+      el('label', { class: 'f' }, 'Ikona', el('div', { class: 'inline' }, f.ikona, preview)),
+      el('label', { class: 'f' }, 'Skratka (keď nie je ikona)', f.skratka)),
+    el('p', { class: 'hint' }, 'Názvy ikon nájdeš na ', el('a', { href: 'https://dashboardicons.com/icons', target: '_blank', rel: 'noopener', text: 'dashboardicons.com' }), ' – po prvom načítaní sa uložia a fungujú aj offline.'),
+    ...field('Popis', f.popis),
+    el('label', { class: 'f' }, 'Kontrola dostupnosti', el('div', { class: 'inline' }, f.kontrola, fromUrl)),
+    el('p', { class: 'hint', text: 'Prehliadač skúsi adresu otvoriť (pri IP/názve cez http://). Prázdne = bez kontroly. Služby s vlastným HTTPS certifikátom môžu vyzerať nedostupné.' }),
+    ...field('Skupina', sel),
+    err
+  ];
+  const doSave = () => {
+    const out = {};
+    for (const k of ['nazov', 'url', 'ikona', 'skratka', 'popis', 'kontrola']) { const x = f[k].value.trim(); if (x) out[k] = x; }
+    if (!out.nazov) { err.textContent = 'Vyplň názov.'; err.hidden = false; f.nazov.focus(); return false; }
+    const target = groups[Number(sel.value)]?.g.polozky || arr;
+    if (!target) { err.textContent = 'Najprv vytvor skupinu.'; err.hidden = false; return false; }
+    mutate(() => {
+      if (isNew) target.push(out);
+      else {
+        Object.keys(it).forEach(k => delete it[k]); Object.assign(it, out);
+        if (target !== arr) { arr.splice(arr.indexOf(it), 1); target.push(it); }
+      }
+    });
+    if (out.kontrola) checkStatus();
+  };
+  const btns = [];
+  if (!isNew) btns.push({ label: 'Zmazať', cls: 'danger', fn: () => { mutate(() => arr.splice(arr.indexOf(it), 1)); toast('Odkaz zmazaný.', 'Vrátiť', undo); } }, 'spacer');
+  btns.push({ label: 'Zrušiť' }, { label: isNew ? 'Pridať' : 'Uložiť', cls: 'primary', fn: doSave });
+  dialog(isNew ? 'Nový odkaz' : 'Upraviť odkaz', body, btns);
+  f.nazov.focus();
+}
+
+function addGroup(arr, what) {
+  const i = input('', 'napr. Kamery');
+  dialog('Nová ' + what, field('Názov', i), [{ label: 'Zrušiť' }, { label: 'Pridať', cls: 'primary', fn: () => {
+    const n = i.value.trim(); if (!n) { i.focus(); return false; }
+    mutate(() => arr.push({ nazov: n, polozky: [] }));
+  } }]);
+  i.focus();
+}
+function renameGroup(g) {
+  const i = input(g.nazov);
+  dialog('Premenovať skupinu', field('Názov', i), [{ label: 'Zrušiť' }, { label: 'Uložiť', cls: 'primary', fn: () => {
+    const n = i.value.trim(); if (!n) { i.focus(); return false; }
+    mutate(() => { g.nazov = n; });
+  } }]);
+  i.select();
+}
+function deleteGroup(id) {
+  const r = refs.get(id); if (!r) return;
+  const count = allItems(r.node.polozky).length;
+  const go = () => { mutate(() => r.arr.splice(r.arr.indexOf(r.node), 1)); toast('Skupina zmazaná.', 'Vrátiť', undo); };
+  if (!count) return go();
+  dialog('Zmazať skupinu?', [el('p', { text: `Skupina „${r.node.nazov}“ obsahuje ${count} odkazov. Zmazať ju aj s nimi?` })],
+    [{ label: 'Zrušiť' }, { label: 'Zmazať', cls: 'primary', fn: go }]);
+}
+function move(id, dir) {
+  const r = refs.get(id); if (!r) return;
+  const i = r.arr.indexOf(r.node), j = i + dir;
+  if (j < 0 || j >= r.arr.length) return;
+  mutate(() => { r.arr.splice(i, 1); r.arr.splice(j, 0, r.node); });
+}
+
+/* --- presúvanie myšou --- */
+let dragId = null;
+app.addEventListener('dragstart', e => {
+  const t = e.target.closest('.tile[data-id]'); if (!t || !editMode) return;
+  dragId = t.dataset.id; t.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragId);
+});
+app.addEventListener('dragend', () => {
+  dragId = null;
+  document.querySelectorAll('.dragging,.drop-before,.drop-in').forEach(x => x.classList.remove('dragging', 'drop-before', 'drop-in'));
+});
+app.addEventListener('dragover', e => {
+  if (!dragId) return;
+  const body = e.target.closest('.gbody[data-group]'); if (!body) return;
+  e.preventDefault();
+  document.querySelectorAll('.drop-before,.drop-in').forEach(x => x.classList.remove('drop-before', 'drop-in'));
+  const t = e.target.closest('.tile[data-id]');
+  if (t && t.dataset.id !== dragId) t.classList.add('drop-before'); else body.classList.add('drop-in');
+});
+app.addEventListener('drop', e => {
+  if (!dragId) return;
+  const body = e.target.closest('.gbody[data-group]'); if (!body) return;
+  e.preventDefault();
+  const src = refs.get(dragId), grp = refs.get(body.dataset.group);
+  const t = e.target.closest('.tile[data-id]');
+  const before = t && t.dataset.id !== dragId ? refs.get(t.dataset.id).node : null;
+  if (!src || !grp) return;
+  mutate(() => {
+    src.arr.splice(src.arr.indexOf(src.node), 1);
+    const target = grp.node.polozky;
+    const idx = before ? target.indexOf(before) : target.filter(n => !isGroup(n)).length;
+    target.splice(idx < 0 ? target.length : idx, 0, src.node);
+  });
+});
+
+/* ================= nastavenia ================= */
+function openSettings() {
+  const st = data.nastavenia;
+  const nazov = input(st.nazov);
+  const tema = el('select', {}, [['auto', 'Podľa systému'], ['dark', 'Tmavá'], ['light', 'Svetlá']].map(([v, l]) => el('option', { value: v, text: l })));
+  tema.value = st.tema;
+  const interval = el('input', { type: 'number', min: '0', max: '3600' }); interval.value = st.kontrolaSekundy;
+  const nova = el('input', { type: 'checkbox' }); nova.checked = !!st.novaKarta;
+  const file = el('input', { type: 'file', accept: '.json,.js,application/json,text/javascript', hidden: true });
+  file.addEventListener('change', async () => {
+    const fl = file.files[0]; if (!fl) return;
+    try {
+      const txt = await fl.text();
+      const d = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
+      if (!d || !Array.isArray(d.sekcie)) throw new Error('chýba „sekcie“');
+      mutate(() => { data = d; data.nastavenia = Object.assign({}, DEFAULTS, d.nastavenia); });
+      document.querySelector('dialog')?.close();
+      toast('Odkazy importované.', 'Vrátiť', undo);
+      checkStatus();
+    } catch (e) { toast('Import zlyhal: ' + e.message); }
+  });
+  const download = (name, text, type) => {
+    const a = el('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  const exportJs = () => {
+    download('odkazy.js', '// Osobné odkazy pre domov.html – tento súbor nejde na GitHub (.gitignore).\nODKAZY = ' +
+      JSON.stringify(data, null, 2) + ';\n', 'text/javascript');
+    if (fileData()) store.set(SRCKEY, hashOf(data));
+  };
+  const exportJson = () => download('odkazy.json', JSON.stringify(data, null, 2), 'application/json');
+  const body = [
+    ...field('Názov stránky', nazov),
+    el('div', { class: 'row2' }, el('label', { class: 'f' }, 'Téma', tema), el('label', { class: 'f' }, 'Kontrola dostupnosti (sekundy, 0 = vypnutá)', interval)),
+    el('label', { class: 'chk' }, nova, 'Otvárať odkazy v novej karte'),
+    el('div', { class: 'btnrow' },
+      el('button', { type: 'button', class: 'btn', text: '⇩ Stiahnuť odkazy.js', onclick: exportJs }),
+      el('button', { type: 'button', class: 'btn', text: '⇩ Export JSON', onclick: exportJson }),
+      el('button', { type: 'button', class: 'btn', text: '⇪ Import', onclick: () => file.click() }),
+      fileData() ? el('button', { type: 'button', class: 'btn', text: '⟳ Načítať z odkazy.js', onclick: () => { document.querySelector('dialog')?.close(); reloadFromFile(); } }) : null,
+      file),
+    el('p', { class: 'hint', text: 'Úpravy sa ukladajú v tomto prehliadači. Aby boli natrvalo (aj v inom prehliadači), stiahni odkazy.js a nahraď ním súbor vedľa domov.html. Súbor odkazy.js nejde na GitHub.' })
+  ];
+  dialog('Nastavenia', body, [{ label: 'Zrušiť' }, { label: 'Uložiť', cls: 'primary', fn: () => {
+    mutate(() => Object.assign(data.nastavenia, {
+      nazov: nazov.value.trim() || 'Domov', tema: tema.value,
+      kontrolaSekundy: Math.max(0, Number(interval.value) || 0), novaKarta: nova.checked }));
+    restartMonitor();
+  } }]);
+}
+
+/* ================= drobnosti ================= */
+let toastTimer = null;
+function toast(msg, label, fn) {
+  document.querySelector('.toast')?.remove();
+  const t = el('div', { class: 'toast', role: 'status' }, el('span', { text: msg }),
+    label ? el('button', { type: 'button', text: label, onclick: () => { t.remove(); fn(); } }) : null);
+  document.body.append(t);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.remove(), label ? 7000 : 3500);
+}
+function showBanner(html, err, actions) {
+  const b = $('#banner');
+  if (!html) { b.replaceChildren(); return; }
+  const box = el('div', { class: 'banner' + (err ? ' err' : '') });
+  const txt = el('span', {}); txt.innerHTML = html; box.append(txt);
+  if (actions) box.append(el('div', { class: 'btnrow', style: 'margin-top:10px' },
+    actions.map(([label, fn]) => el('button', { type: 'button', class: 'btn', text: label, onclick: fn }))));
+  b.replaceChildren(box);
+}
+function tickClock() {
+  const now = new Date(), h = now.getHours();
+  $('#time').textContent = now.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
+  $('#date').textContent = now.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('#greeting').textContent = h < 5 ? 'Dobrú noc' : h < 10 ? 'Dobré ráno' : h < 18 ? 'Dobrý deň' : h < 22 ? 'Dobrý večer' : 'Dobrú noc';
+}
+
+/* ================= udalosti ================= */
+$('#q').addEventListener('input', applyFilter);
+$('#q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { const t = document.querySelector('#app .tile:not([hidden])[href]'); if (t && !editMode) t.click(); }
+  if (e.key === 'Escape') { e.target.value = ''; applyFilter(); e.target.blur(); }
+});
+document.addEventListener('keydown', e => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.querySelector('dialog[open]');
+  if (e.key === '/' && !typing) { e.preventDefault(); $('#q').focus(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && editMode && !typing) { e.preventDefault(); undo(); }
+});
+const toggleEdit = () => { editMode = !editMode; if (editMode) setSaved(''); render(); };
+$('#bEdit').addEventListener('click', toggleEdit);
+$('#bDone').addEventListener('click', toggleEdit);
+$('#bUndo').addEventListener('click', undo);
+$('#bSettings').addEventListener('click', openSettings);
+$('#bStatus').addEventListener('click', () => { status.clear(); checkStatus(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && data) checkStatus(); });
+
+/* ================= štart ================= */
+tickClock(); setInterval(tickClock, 1000);
+load(); render(); checkStatus(); restartMonitor(); $('#q').focus();
+})();
+</script>
+</body>
+</html>
