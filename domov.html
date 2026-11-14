@@ -89,41 +89,43 @@ a{color:inherit}
 .banner.err{background:rgba(240,100,100,.12)}
 
 /* ---------- sekcie a skupiny ---------- */
-.section{margin-top:12px}
+.section{margin-top:16px}
 .shead{display:flex;align-items:center;gap:10px;margin:0 0 8px}
-.shead h2{margin:0;font-size:.72rem;text-transform:uppercase;letter-spacing:.16em;color:var(--muted);font-weight:600}
+.shead h2{margin:0;font-size:.76rem;text-transform:uppercase;letter-spacing:.16em;color:var(--muted);font-weight:600}
 .shead .line{flex:1;height:1px;background:var(--line)}
-.groups{column-count:1;column-gap:12px}
-.group{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:9px;box-shadow:var(--shadow);
-  break-inside:avoid;margin:0 0 12px;display:block;width:100%}
+.groups{column-count:1;column-gap:14px}
+.group{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:var(--shadow);
+  break-inside:avoid;margin:0 0 14px;display:block;width:100%}
 .group.sub .tile{background:var(--panel)}
-.group.sub{background:var(--panel2);box-shadow:none;border-radius:11px;padding:7px;margin:6px 0 0}
-.ghead{display:flex;align-items:center;gap:8px;margin:0 3px 6px}
-.ghead h3{margin:0;font-size:.9rem;font-weight:650;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.group.sub .ghead h3{font-size:.78rem;color:var(--muted);font-weight:600}
+.group.sub{background:var(--panel2);box-shadow:none;border-radius:12px;padding:9px;margin:8px 0 0}
+.ghead{display:flex;align-items:center;gap:8px;margin:0 3px 9px}
+.ghead h3{margin:0;font-size:1rem;font-weight:650;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.group.sub .ghead h3{font-size:.85rem;color:var(--muted);font-weight:600}
 .ghead .count{font-size:.75rem;color:var(--muted)}
-.gbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:5px;min-height:10px}
-.sec-kompaktne .gbody{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:4px}
+.gbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;min-height:10px}
+.section[data-icols] .gbody{grid-template-columns:repeat(var(--icols),minmax(0,1fr))}
+.sec-kompaktne:not([data-icols]) .gbody{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.sec-kompaktne .gbody{gap:6px}
 
 .tile{
-  position:relative;display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;
+  position:relative;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:11px;
   text-decoration:none;border:1px solid transparent;background:var(--panel2);min-width:0;
   transition:border-color .15s,transform .15s,background .15s;
 }
 .tile:hover{border-color:var(--accent);transform:translateY(-1px)}
 .tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.sec-kompaktne .tile{padding:4px 7px;gap:7px;background:transparent;border-color:var(--line)}
-.txt{min-width:0;display:flex;flex-direction:column}
-.nm{font-weight:600;font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ds{font-size:.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sec-kompaktne .nm{font-weight:500;font-size:.8rem}
+.sec-kompaktne .tile{padding:7px 9px;gap:8px;background:transparent;border-color:var(--line)}
+.txt{min-width:0;display:flex;flex-direction:column;padding-right:8px}
+.nm{font-weight:600;font-size:.93rem;line-height:1.25;overflow-wrap:break-word;min-width:0}
+.ds{font-size:.78rem;line-height:1.3;color:var(--muted);overflow-wrap:break-word;min-width:0}
+.sec-kompaktne .nm{font-weight:500;font-size:.88rem}
 
-.ico{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;overflow:hidden;font-size:20px}
+.ico{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;overflow:hidden;font-size:20px}
 .ico img{width:100%;height:100%;object-fit:contain}
 .ico:has(img){background:var(--ico-bg);padding:var(--ico-pad)}
-.ico.ph{color:#fff;font-weight:700;font-size:.74rem;letter-spacing:.02em}
-.sec-kompaktne .ico{width:20px;height:20px;border-radius:6px;font-size:12px}
-.sec-kompaktne .ico.ph{font-size:.56rem}
+.ico.ph{color:#fff;font-weight:700;font-size:.8rem;letter-spacing:.02em}
+.sec-kompaktne .ico{width:24px;height:24px;border-radius:7px;font-size:13px}
+.sec-kompaktne .ico.ph{font-size:.62rem}
 .ico.ph:has(img){padding:0}
 .ico.ph img{width:64%;height:64%}
 
@@ -140,7 +142,7 @@ a{color:inherit}
 
 .frequent .group{margin:0;width:fit-content;max-width:100%}
 .frequent .gbody{display:flex;flex-wrap:wrap}
-.frequent .tile{width:180px}
+.frequent .tile{width:210px}
 
 /* ---------- režim úprav ---------- */
 .ctl{display:none;gap:4px}
@@ -189,6 +191,11 @@ label.f input:focus,label.f select:focus{border-color:var(--accent);box-shadow:0
 .inline input{flex:1;min-width:0}
 .inline .mini{flex:none}
 .btnrow{display:flex;flex-wrap:wrap;gap:8px}
+fieldset.layout{border:1px solid var(--line);border-radius:12px;padding:10px 14px 12px;margin:0}
+fieldset.layout legend{padding:0 6px;font-size:.85rem;color:var(--muted)}
+.lgrid{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:8px 12px;align-items:center;font-size:.85rem}
+.lgrid b{font-weight:600}
+.lgrid select{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text)}
 label.chk{display:flex;align-items:center;gap:10px;font-size:.92rem}
 .err-msg{color:var(--bad);font-size:.85rem;margin:0}
 
@@ -499,6 +506,12 @@ let refs = new Map(), rid = 0;
 const reg = (node, arr) => { const id = 'n' + (++rid); refs.set(id, { node, arr }); return id; };
 const app = $('#app');
 
+// dlhé adresy sa lámu za bodkou, lomkou či podčiarkovníkom, nie uprostred slova
+function breakable(text) {
+  const out = [];
+  S(text).split(/(?<=[.\/_:-])/).forEach((part, i) => { if (i) out.push(el('wbr', {})); out.push(part); });
+  return out;
+}
 function tileEl(it, arr, path, opts = {}) {
   const id = opts.noRef ? null : reg(it, arr);
   const href = safeHref(it.url);
@@ -509,7 +522,7 @@ function tileEl(it, arr, path, opts = {}) {
     target: data.nastavenia.novaKarta ? '_blank' : null, rel: 'noopener noreferrer',
     draggable: editMode && id ? 'true' : null, title: it.url || '',
     'data-search': norm([path.join(' '), it.nazov, it.popis, it.url].join(' '))
-  }, iconEl(it), el('span', { class: 'txt' }, el('span', { class: 'nm', text: it.nazov }), desc ? el('span', { class: 'ds', text: desc }) : null),
+  }, iconEl(it), el('span', { class: 'txt' }, el('span', { class: 'nm' }, breakable(it.nazov)), desc ? el('span', { class: 'ds' }, breakable(desc)) : null),
      mon ? el('span', { class: 'dot ' + (status.get(mon) || 'unk') }) : null);
   a.addEventListener('click', e => {
     if (editMode) { e.preventDefault(); if (id) editItem(it, arr); return; }
@@ -591,13 +604,27 @@ function render() {
   paintDots();
 }
 
-// toľko stĺpcov, koľko sa zmestí – ale nie viac, než je skupín (žiadne prázdne stĺpce)
+// Rozloženie si každý počítač nastaví sám (⚙ → Rozloženie), uložené v localStorage.
+// 0 = automaticky. Služby = sekcia so štýlom „karty“, záložky = „kompaktne“.
+const LAYOUT_KEY = 'domov-rozlozenie';
+const LAYOUT_DEFAULT = { sluzbySkupiny: 0, sluzbyOdkazy: 0, zalozkySkupiny: 0, zalozkyOdkazy: 0 };
+let layout = Object.assign({}, LAYOUT_DEFAULT, store.get(LAYOUT_KEY, {}));
+const kindOf = sectionEl => sectionEl.classList.contains('sec-kompaktne') ? 'zalozky' : 'sluzby';
+
 function fitColumns() {
-  document.querySelectorAll('#app .groups').forEach(g => {
-    const count = [...g.children].filter(x => x.classList.contains('group') && !x.hidden).length;
-    const minW = g.closest('.sec-kompaktne') ? 200 : 270;
-    const fit = Math.floor((g.clientWidth + 12) / (minW + 12));
-    g.style.columnCount = Math.max(1, Math.min(count || 1, fit));
+  document.querySelectorAll('#app .section:not(.frequent)').forEach(sec => {
+    const g = sec.querySelector('.groups'); if (!g) return;
+    const kind = kindOf(sec);
+    const cols = Number(layout[kind + 'Skupiny']) || 0, items = Number(layout[kind + 'Odkazy']) || 0;
+    if (cols > 0) g.style.columnCount = cols;
+    else {
+      // automaticky: koľko sa zmestí, ale nie viac než je skupín
+      const count = [...g.children].filter(x => x.classList.contains('group') && !x.hidden).length;
+      const minW = kind === 'zalozky' ? 260 : 340;
+      g.style.columnCount = Math.max(1, Math.min(count || 1, Math.floor((g.clientWidth + 14) / (minW + 14))));
+    }
+    if (items > 0) { sec.dataset.icols = items; sec.style.setProperty('--icols', items); }
+    else { delete sec.dataset.icols; sec.style.removeProperty('--icols'); }
   });
 }
 window.addEventListener('resize', () => requestAnimationFrame(fitColumns));
@@ -803,7 +830,27 @@ function openSettings() {
     if (fileData()) store.set(SRCKEY, hashOf(data));
   };
   const exportJson = () => download('odkazy.json', JSON.stringify(data, null, 2), 'application/json');
+
+  // rozloženie – len pre tento počítač, zmena sa hneď ukáže
+  const before = { ...layout };
+  const numSel = (key, max) => {
+    const sl = el('select', {}, [el('option', { value: '0', text: 'Automaticky' }),
+      ...Array.from({ length: max }, (_, i) => el('option', { value: String(i + 1), text: String(i + 1) }))]);
+    sl.value = String(layout[key] || 0);
+    sl.addEventListener('change', () => { layout[key] = Number(sl.value); fitColumns(); });
+    return sl;
+  };
+  const layoutBox = el('fieldset', { class: 'layout' },
+    el('legend', { text: 'Rozloženie (len pre tento počítač)' }),
+    el('div', { class: 'lgrid' },
+      el('span', {}), el('b', { text: 'Stĺpce skupín' }), el('b', { text: 'Odkazy v riadku skupiny' }),
+      el('b', { text: 'Služby' }), numSel('sluzbySkupiny', 10), numSel('sluzbyOdkazy', 8),
+      el('b', { text: 'Záložky' }), numSel('zalozkySkupiny', 10), numSel('zalozkyOdkazy', 8)),
+    el('p', { class: 'hint', text: 'Stĺpce sa vždy roztiahnu na celú šírku okna. Zmenu vidíš hneď za týmto oknom.' }));
+  let savedLayout = false;
+
   const body = [
+    layoutBox,
     ...field('Názov stránky', nazov),
     el('div', { class: 'row2' }, el('label', { class: 'f' }, 'Téma', tema), el('label', { class: 'f' }, 'Kontrola dostupnosti (sekundy, 0 = vypnutá)', interval)),
     el('label', { class: 'chk' }, nova, 'Otvárať odkazy v novej karte'),
@@ -815,12 +862,16 @@ function openSettings() {
       file),
     el('p', { class: 'hint', text: 'Úpravy sa ukladajú v tomto prehliadači. Aby boli natrvalo (aj v inom prehliadači), stiahni odkazy.js a nahraď ním súbor vedľa domov.html. Súbor odkazy.js nejde na GitHub.' })
   ];
-  dialog('Nastavenia', body, [{ label: 'Zrušiť' }, { label: 'Uložiť', cls: 'primary', fn: () => {
+  const dlg = dialog('Nastavenia', body, [{ label: 'Zrušiť' }, { label: 'Uložiť', cls: 'primary', fn: () => {
+    savedLayout = true;
+    store.set(LAYOUT_KEY, layout);
     mutate(() => Object.assign(data.nastavenia, {
       nazov: nazov.value.trim() || 'Domov', tema: tema.value,
       kontrolaSekundy: Math.max(0, Number(interval.value) || 0), novaKarta: nova.checked }));
     restartMonitor();
   } }]);
+  // zrušenie (aj Esc) vráti rozloženie späť
+  dlg.addEventListener('close', () => { if (!savedLayout) { layout = before; fitColumns(); } });
 }
 
 /* ================= drobnosti ================= */
