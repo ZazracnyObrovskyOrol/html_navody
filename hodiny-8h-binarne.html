@@ -6,134 +6,260 @@
 <meta name="description" content="8-hodinový ciferník, ktorého čísla sa menia podľa aktuálnej tretiny dňa, a binárne 24-hodinové hodiny.">
 <title>8-hodinové a binárne hodiny</title>
 <style>
+  /* ---------- farby podľa úseku dňa ---------- */
   :root{
-    --bg1:#1b2040; --bg2:#3a2f6b; --bg3:#0d1226;
-    --card:rgba(255,255,255,.07); --cardb:rgba(255,255,255,.16);
-    --face:#232a52; --ink:#e8ecff; --muted:#a9b2e0;
-    --hour:#ffd9a0; --min:#e8ecff; --sec:#ff8fa3; --accent:#9db4ff;
-    --led-off:rgba(255,255,255,.10); --glow:rgba(157,180,255,.35);
+    --base:#070a1f;
+    --a1:#3b2bd9; --a2:#0fb5c9; --a3:#7d2ae8;          /* aurora škvrny */
+    --accent:#8fb3ff; --accent2:#c49bff;
+    --hour:#ffd59e; --min:#e9edff; --sec:#ff7a93;
+    --ink:#eef1ff; --muted:rgba(238,241,255,.62); --faint:rgba(238,241,255,.14);
+    --glass:rgba(255,255,255,.055); --glass-b:rgba(255,255,255,.12);
+    --stars:1;
   }
-  body[data-seg="1"]{
-    --bg1:#d8f0f2; --bg2:#a9d6e5; --bg3:#eaf7f1;
-    --card:rgba(255,255,255,.55); --cardb:rgba(255,255,255,.9);
-    --face:#fbfefe; --ink:#1f3b4d; --muted:#4d6f82;
-    --hour:#1f5f7a; --min:#2c8aa8; --sec:#e76f51; --accent:#2a9d8f;
-    --led-off:rgba(31,59,77,.12); --glow:rgba(42,157,143,.3);
+  body[data-seg="1"]{                                   /* deň 8–16 */
+    --base:#06223f;
+    --a1:#1e88e5; --a2:#00c6b8; --a3:#ffb547;
+    --accent:#6fe3ff; --accent2:#ffd36b;
+    --hour:#ffd36b; --sec:#ff8a65;
+    --stars:0;
   }
-  body[data-seg="2"]{
-    --bg1:#ffd6a5; --bg2:#ff9e9e; --bg3:#ffe8c7;
-    --card:rgba(255,248,240,.5); --cardb:rgba(255,255,255,.85);
-    --face:#fff8ef; --ink:#5a2d3c; --muted:#8a5a63;
-    --hour:#b5434f; --min:#d9694f; --sec:#6a4c93; --accent:#e07a5f;
-    --led-off:rgba(90,45,60,.12); --glow:rgba(224,122,95,.35);
+  body[data-seg="2"]{                                   /* večer 16–24 */
+    --base:#1a0b24;
+    --a1:#ff5e62; --a2:#ff9966; --a3:#8e2de2;
+    --accent:#ffb38a; --accent2:#ff6fa8;
+    --hour:#ffc58f; --sec:#ff6fa8;
+    --stars:.45;
   }
+
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%}
+  html,body{margin:0}
   body{
-    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    min-height:100vh;
+    font-family:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
     color:var(--ink);
-    background:linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3));
-    background-attachment:fixed;
-    min-height:100vh; padding:20px 16px 40px;
-    display:flex;flex-direction:column;align-items:center;gap:22px;
+    background:var(--base);
+    transition:background-color 1.5s ease;
+    overflow-x:hidden;
   }
-  body::before{
-    content:"";position:fixed;inset:0;pointer-events:none;
-    background:
-      radial-gradient(circle at 15% 20%,var(--glow),transparent 35%),
-      radial-gradient(circle at 85% 80%,var(--glow),transparent 40%);
+
+  /* ---------- pozadie: aurora + hviezdy + zrnitosť ---------- */
+  .bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+  .blob{
+    position:absolute;width:60vmax;height:60vmax;border-radius:50%;
+    filter:blur(90px);opacity:.55;mix-blend-mode:screen;
+    transition:background 1.5s ease;
   }
-  nav{position:relative;z-index:1;align-self:stretch;max-width:1000px;margin:0 auto;width:100%}
-  nav a{color:var(--muted);text-decoration:none;font-size:.9rem}
-  nav a:hover{color:var(--ink)}
-  header{text-align:center;position:relative;z-index:1}
-  h1{margin:0;font-weight:300;font-size:clamp(1.5rem,3vw,2.3rem);letter-spacing:.04em}
-  .seg{margin-top:6px;color:var(--muted)}
-  .seg b{color:var(--accent);font-weight:600}
-  main{
-    position:relative;z-index:1;width:100%;max-width:1000px;
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;
+  .b1{background:var(--a1);top:-25vmax;left:-15vmax;animation:drift1 28s ease-in-out infinite alternate}
+  .b2{background:var(--a2);bottom:-30vmax;right:-20vmax;animation:drift2 34s ease-in-out infinite alternate}
+  .b3{background:var(--a3);top:20vh;left:35vw;width:45vmax;height:45vmax;opacity:.4;animation:drift3 40s ease-in-out infinite alternate}
+  @keyframes drift1{to{transform:translate(18vw,14vh) scale(1.15)}}
+  @keyframes drift2{to{transform:translate(-22vw,-12vh) scale(1.1)}}
+  @keyframes drift3{to{transform:translate(-25vw,18vh) scale(.85)}}
+  .stars{
+    position:absolute;inset:0;opacity:var(--stars);transition:opacity 1.5s;
+    background-image:
+      radial-gradient(1.2px 1.2px at 8% 12%,#fff,transparent),
+      radial-gradient(1px 1px at 22% 68%,#fff,transparent),
+      radial-gradient(1.4px 1.4px at 37% 28%,#fff,transparent),
+      radial-gradient(1px 1px at 48% 82%,#fff,transparent),
+      radial-gradient(1.2px 1.2px at 61% 9%,#fff,transparent),
+      radial-gradient(1px 1px at 72% 48%,#fff,transparent),
+      radial-gradient(1.4px 1.4px at 86% 22%,#fff,transparent),
+      radial-gradient(1px 1px at 93% 74%,#fff,transparent),
+      radial-gradient(1px 1px at 15% 90%,#fff,transparent),
+      radial-gradient(1.2px 1.2px at 79% 92%,#fff,transparent);
+    animation:twinkle 6s ease-in-out infinite alternate;
   }
+  @keyframes twinkle{from{filter:brightness(.6)}to{filter:brightness(1.2)}}
+  .grain{
+    position:absolute;inset:-50%;opacity:.07;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,.45))}
+  @media (prefers-reduced-motion:reduce){.blob,.stars{animation:none}}
+
+  /* ---------- rozloženie ---------- */
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:20px 16px 48px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:28px}
+  .back{
+    color:var(--muted);text-decoration:none;font-size:.9rem;
+    padding:8px 14px;border-radius:999px;border:1px solid var(--glass-b);background:var(--glass);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:.2s;
+  }
+  .back:hover{color:var(--ink);border-color:var(--accent)}
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;font-size:.85rem;font-weight:600;letter-spacing:.04em;
+    padding:8px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--glass-b);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  }
+  .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+
+  /* hero */
+  .hero{text-align:center;margin-bottom:34px}
+  .eyebrow{font-size:.78rem;text-transform:uppercase;letter-spacing:.28em;color:var(--muted)}
+  .time{
+    font-size:clamp(3.4rem,13vw,7.5rem);font-weight:200;line-height:1;margin:10px 0 8px;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    background:linear-gradient(180deg,#fff 30%,var(--accent));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .time .sec{font-size:.4em;font-weight:300;opacity:.7;margin-left:.15em}
+  .date{color:var(--muted);font-size:1rem}
+
+  /* časová os dňa */
+  .timeline{max-width:640px;margin:26px auto 0}
+  .track{position:relative;height:10px;border-radius:999px;background:var(--faint);display:flex;overflow:hidden}
+  .track span{flex:1;border-right:2px solid var(--base);opacity:.35;transition:opacity .6s}
+  .track span:last-child{border-right:0}
+  .track span:nth-child(1){background:linear-gradient(90deg,#3b2bd9,#0fb5c9)}
+  .track span:nth-child(2){background:linear-gradient(90deg,#1e88e5,#ffb547)}
+  .track span:nth-child(3){background:linear-gradient(90deg,#ff5e62,#8e2de2)}
+  .track span.active{opacity:1}
+  .marker-row{position:relative;height:0}
+  .marker{
+    position:absolute;top:-15px;width:18px;height:18px;margin-left:-9px;border-radius:50%;
+    background:#fff;border:3px solid var(--base);box-shadow:0 0 0 2px var(--accent),0 0 18px var(--accent);
+  }
+  .tl-labels{display:flex;margin-top:10px;font-size:.78rem;color:var(--muted)}
+  .tl-labels div{flex:1;text-align:center}
+  .tl-labels div.active{color:var(--ink);font-weight:600}
+
+  /* karty */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px}
   .card{
-    background:var(--card);border:1px solid var(--cardb);border-radius:28px;
-    padding:22px 18px 20px;text-align:center;
-    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-    box-shadow:0 18px 50px -20px rgba(0,0,0,.35);
+    position:relative;border-radius:28px;padding:26px 22px 24px;
+    background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.025));
+    border:1px solid var(--glass-b);
+    backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);
+    box-shadow:0 30px 60px -30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);
+    transition:transform .3s ease,border-color .3s;
   }
-  .card h2{margin:0;font-size:1.25rem;font-weight:600;letter-spacing:.03em}
-  .card .sub{font-size:.85rem;color:var(--muted);margin:2px 0 12px}
-  svg{width:100%;height:auto;max-width:380px;display:block;margin:0 auto;overflow:visible}
-  .facebg{fill:var(--face);transition:fill .8s}
-  .rim{fill:none;stroke:var(--accent);stroke-width:1.6;opacity:.8}
-  .tick{stroke:var(--muted);stroke-width:.5;opacity:.7}
-  .major{stroke:var(--ink);stroke-width:1.6;opacity:.95}
-  .num{fill:var(--ink);text-anchor:middle;dominant-baseline:central;font-weight:500}
-  .num.now{fill:var(--accent);font-weight:700}
-  .h{stroke:var(--hour);stroke-linecap:round}
-  .m{stroke:var(--min);stroke-linecap:round}
+  .card{display:flex;flex-direction:column}
+  .card .body{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.22)}
+  .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+  .card h2{margin:0;font-size:1.05rem;font-weight:600;letter-spacing:.02em}
+  .tag{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.16em}
+  .card p.sub{margin:0 0 14px;font-size:.85rem;color:var(--muted)}
+
+  /* 8-hodinový ciferník */
+  svg{width:100%;max-width:360px;height:auto;display:block;margin:0 auto;overflow:visible}
+  .face{fill:rgba(255,255,255,.04);stroke:rgba(255,255,255,.1);stroke-width:1}
+  .ring-bg{fill:none;stroke:var(--faint);stroke-width:5}
+  .ring{fill:none;stroke:url(#ringGrad);stroke-width:5;stroke-linecap:round;filter:drop-shadow(0 0 4px var(--accent))}
+  .tick{stroke:rgba(255,255,255,.22);stroke-width:.6}
+  .major{stroke:rgba(255,255,255,.75);stroke-width:2;stroke-linecap:round}
+  .num{fill:var(--muted);text-anchor:middle;dominant-baseline:central;font-weight:400;font-size:13px;transition:fill .3s}
+  .num.now{fill:#fff;font-weight:700;font-size:16px}
+  .now-bg{fill:var(--accent);opacity:.22}
+  .h{stroke:var(--hour);stroke-linecap:round;filter:drop-shadow(0 0 3px rgba(0,0,0,.4))}
+  .m{stroke:var(--min);stroke-linecap:round;filter:drop-shadow(0 0 3px rgba(0,0,0,.4))}
   .s{stroke:var(--sec);stroke-linecap:round}
-  .hub{fill:var(--hour);stroke:var(--face);stroke-width:1.5}
-  .hubs{fill:var(--sec)}
-  .progress{fill:none;stroke:var(--accent);stroke-width:3;opacity:.35;stroke-linecap:round}
-  .digital{font-size:1.6rem;font-weight:300;margin-top:14px;font-variant-numeric:tabular-nums;letter-spacing:.06em}
-  .info{margin-top:6px;font-size:.85rem;color:var(--muted);line-height:1.5}
-  .info b{color:var(--ink);font-weight:600}
+  .hub{fill:var(--base);stroke:var(--hour);stroke-width:2}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+  .stat{background:rgba(255,255,255,.05);border:1px solid var(--glass-b);border-radius:16px;padding:10px 8px;text-align:center}
+  .stat b{display:block;font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
 
   /* binárne hodiny */
-  .bin{display:grid;grid-template-columns:auto repeat(6,1fr) auto;gap:10px 8px;align-items:center;
-       max-width:420px;margin:18px auto 0}
-  .bin .w{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
-  .bin .lbl{font-size:.85rem;color:var(--muted);text-align:left;padding-right:4px}
-  .bin .val{font-size:1.1rem;font-variant-numeric:tabular-nums;text-align:right;min-width:2.2em}
-  .led{width:100%;max-width:40px;aspect-ratio:1;border-radius:50%;margin:0 auto;
-       background:var(--led-off);border:1px solid var(--cardb);transition:background .25s,box-shadow .25s}
-  .led.on{background:var(--c);box-shadow:0 0 14px var(--c)}
+  .bin{display:grid;grid-template-columns:2.6em repeat(6,1fr) 2.6em;gap:12px 10px;align-items:center;margin-top:10px}
+  .bin .w{font-size:.72rem;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+  .bin .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+  .bin .val{font-size:1.25rem;font-weight:300;text-align:right;font-variant-numeric:tabular-nums}
+  .led{
+    width:100%;max-width:44px;aspect-ratio:1;margin:0 auto;border-radius:14px;
+    background:rgba(255,255,255,.05);border:1px solid var(--glass-b);
+    transition:background .15s,box-shadow .15s,transform .15s;
+  }
+  .led.on{
+    background:radial-gradient(circle at 35% 30%,#fff,var(--c) 55%);border-color:transparent;
+    box-shadow:0 0 18px var(--c),0 0 4px var(--c);transform:scale(1.04);
+  }
   .led.none{visibility:hidden}
-  .row-h{--c:var(--hour)} .row-m{--c:var(--min)} .row-s{--c:var(--sec)}
-  .bits{margin-top:16px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.95rem;letter-spacing:.08em}
-  .legend{position:relative;z-index:1;font-size:.82rem;color:var(--muted);text-align:center;max-width:700px;line-height:1.6}
+  .row-h{--c:var(--hour)} .row-m{--c:var(--accent)} .row-s{--c:var(--sec)}
+  .bits{
+    margin-top:22px;padding:12px;border-radius:16px;text-align:center;
+    background:rgba(0,0,0,.18);border:1px solid var(--glass-b);
+    font-family:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;font-size:1rem;letter-spacing:.12em;
+  }
+  .bits .h1{color:var(--hour)} .bits .m1{color:var(--accent)} .bits .s1{color:var(--sec)} .bits .sep{color:var(--muted)}
+  .hint{margin-top:14px;display:grid;gap:4px;font-size:.82rem;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+  .hint b{color:var(--ink);font-weight:600}
+
+  footer{margin-top:30px;text-align:center;font-size:.8rem;color:var(--muted);line-height:1.6}
+
+  @media (max-width:480px){
+    .bin{gap:10px 6px}
+    .led{border-radius:10px}
+  }
 </style>
 </head>
 <body data-seg="0">
 
-<nav><a href="index.html">← Späť na návody</a></nav>
+<div class="bg" aria-hidden="true">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="stars"></div><div class="grain"></div><div class="vignette"></div>
+</div>
 
-<header>
-  <h1>8-hodinové a binárne hodiny</h1>
-  <div class="seg" id="segLabel"></div>
-</header>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="index.html">← Návody</a>
+    <div class="chip"><span class="dot"></span><span id="chip"></span></div>
+  </div>
 
-<main>
-  <section class="card">
-    <h2>8-hodinový cyklus</h2>
-    <div class="sub">Čísla na ciferníku zodpovedajú aktuálnej tretine dňa</div>
-    <svg id="clock8" viewBox="-105 -105 210 210"></svg>
-    <div class="digital" id="dig8"></div>
-    <div class="info" id="info8"></div>
+  <section class="hero">
+    <div class="eyebrow">Aktuálny čas</div>
+    <div class="time" id="bigTime">00:00<span class="sec">00</span></div>
+    <div class="date" id="date"></div>
+
+    <div class="timeline">
+      <div class="track" id="track"><span></span><span></span><span></span></div>
+      <div class="marker-row"><div class="marker" id="marker"></div></div>
+      <div class="tl-labels" id="tlLabels"><div>Noc · 0–8</div><div>Deň · 8–16</div><div>Večer · 16–24</div></div>
+    </div>
   </section>
 
-  <section class="card">
-    <h2>Binárne 24-hodinové hodiny</h2>
-    <div class="sub">Svieti = 1, nesvieti = 0 · súčet hodnôt v riadku dáva číslo</div>
-    <div class="bin" id="bin"></div>
-    <div class="bits" id="bits"></div>
-    <div class="digital" id="digBin"></div>
-  </section>
-</main>
+  <main class="grid">
+    <section class="card">
+      <div class="card-head"><h2>8-hodinový cyklus</h2><span class="tag" id="segTag"></span></div>
+      <p class="sub">Čísla na ciferníku sa menia podľa aktuálnej tretiny dňa.</p>
+      <svg id="clock8" viewBox="-110 -110 220 220">
+        <defs>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent2)"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="stats">
+        <div class="stat"><b id="stHour">–</b><span>hodina úseku</span></div>
+        <div class="stat"><b id="stPct">–</b><span>prejdené</span></div>
+        <div class="stat"><b id="stLeft">–</b><span>do konca</span></div>
+      </div>
+    </section>
 
-<div class="legend">
-  Deň je rozdelený na tri 8-hodinové úseky: <b>0–8</b>, <b>8–16</b> a <b>16–24</b>.
-  Hodinová ručička obehne ciferník raz za 8 hodín; navrchu je vždy začiatok aktuálneho úseku.
+    <section class="card">
+      <div class="card-head"><h2>Binárne hodiny</h2><span class="tag">24 h</span></div>
+      <p class="sub">Svieti = 1, nesvieti = 0. Súčet hodnôt v riadku dáva číslo.</p>
+      <div class="body">
+        <div class="bin" id="bin"></div>
+        <div class="bits" id="bits"></div>
+        <div class="hint" id="hint"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Deň je rozdelený na tri 8-hodinové úseky. Hodinová ručička obehne ciferník raz za 8 hodín,
+    navrchu je vždy začiatok aktuálneho úseku.
+  </footer>
 </div>
 
 <script>
 (() => {
   const NS = "http://www.w3.org/2000/svg";
-  const SEGMENTS = [
-    { name: "Noc",   icon: "🌙" },
-    { name: "Deň",   icon: "☀️" },
-    { name: "Večer", icon: "🏡" },
-  ];
+  const SEGMENTS = ["Noc", "Deň", "Večer"];
   const el = (tag, attrs = {}, parent) => {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -145,70 +271,71 @@
     return [r * Math.cos(a), r * Math.sin(a)];
   };
   const p2 = n => String(n).padStart(2, "0");
+  const $ = id => document.getElementById(id);
 
-  // --- 8-hodinový ciferník ---
-  const svg = document.getElementById("clock8");
-  el("circle", { r: 101, class: "facebg" }, svg);
-  el("circle", { r: 101, class: "rim" }, svg);
-  const progress = el("path", { class: "progress" }, svg);
-  for (let i = 0; i < 60; i++) {
-    const [x1, y1] = pol(94, i * 6), [x2, y2] = pol(i % 5 ? 91 : 89, i * 6);
+  // ---------- 8-hodinový ciferník ----------
+  const svg = $("clock8");
+  el("circle", { r: 100, class: "face" }, svg);
+  el("circle", { r: 104, class: "ring-bg" }, svg);
+  const ring = el("path", { class: "ring" }, svg);
+  for (let i = 0; i < 48; i++) {               // značky po 10 minútach
+    if (i % 6 === 0) continue;
+    const [x1, y1] = pol(94, i * 7.5), [x2, y2] = pol(90, i * 7.5);
     el("line", { x1, y1, x2, y2, class: "tick" }, svg);
   }
+  const nowBg = el("circle", { r: 13, class: "now-bg" }, svg);
   const nums = [];
   for (let i = 0; i < 8; i++) {
     const deg = i * 45;
-    const [x1, y1] = pol(94, deg), [x2, y2] = pol(83, deg);
+    const [x1, y1] = pol(95, deg), [x2, y2] = pol(85, deg);
     el("line", { x1, y1, x2, y2, class: "major" }, svg);
-    const [tx, ty] = pol(72, deg);
-    nums.push(el("text", { x: tx, y: ty, class: "num", "font-size": 14 }, svg));
+    const [tx, ty] = pol(70, deg);
+    nums.push({ t: el("text", { x: tx, y: ty, class: "num" }, svg), x: tx, y: ty });
   }
-  const segText = el("text", { x: 0, y: 32, class: "num", "font-size": 7, opacity: .6 }, svg);
-  const hHand = el("line", { x1: 0, y1: 7, x2: 0, y2: -50, class: "h", "stroke-width": 4.6 }, svg);
-  const mHand = el("line", { x1: 0, y1: 10, x2: 0, y2: -78, class: "m", "stroke-width": 3 }, svg);
-  const sHand = el("line", { x1: 0, y1: 16, x2: 0, y2: -84, class: "s", "stroke-width": 1.1 }, svg);
-  el("circle", { r: 4.6, class: "hub" }, svg);
-  el("circle", { r: 2, class: "hubs" }, svg);
+  const hHand = el("line", { x1: 0, y1: 8, x2: 0, y2: -48, class: "h", "stroke-width": 5 }, svg);
+  const mHand = el("line", { x1: 0, y1: 10, x2: 0, y2: -76, class: "m", "stroke-width": 3 }, svg);
+  const sHand = el("line", { x1: 0, y1: 16, x2: 0, y2: -86, class: "s", "stroke-width": 1.2 }, svg);
+  el("circle", { r: 5, class: "hub" }, svg);
 
-  const arc = deg => { // oblúk od 0° po deg na okraji ciferníka
+  const arc = deg => {
     if (deg < .2) return "";
     if (deg > 359.8) deg = 359.8;
-    const [x, y] = pol(98, deg);
-    return `M0 -98A98 98 0 ${deg > 180 ? 1 : 0} 1 ${x} ${y}`;
+    const [x, y] = pol(104, deg);
+    return `M0 -104A104 104 0 ${deg > 180 ? 1 : 0} 1 ${x} ${y}`;
   };
 
-  // --- binárne hodiny ---
-  const bin = document.getElementById("bin");
+  // ---------- binárne hodiny ----------
+  const bin = $("bin");
   const WEIGHTS = [32, 16, 8, 4, 2, 1];
   const ROWS = [
     { key: "h", label: "hod", bits: 5 },
     { key: "m", label: "min", bits: 6 },
     { key: "s", label: "sek", bits: 6 },
   ];
-  const head = document.createElement("div"); bin.appendChild(head);
-  WEIGHTS.forEach(w => {
-    const d = document.createElement("div"); d.className = "w"; d.textContent = w; bin.appendChild(d);
-  });
-  bin.appendChild(document.createElement("div"));
+  const div = (cls, text) => {
+    const d = document.createElement("div");
+    if (cls) d.className = cls;
+    if (text !== undefined) d.textContent = text;
+    bin.appendChild(d);
+    return d;
+  };
+  div();
+  WEIGHTS.forEach(w => div("w", w));
+  div();
   ROWS.forEach(r => {
-    const lbl = document.createElement("div"); lbl.className = "lbl"; lbl.textContent = r.label;
-    bin.appendChild(lbl);
+    div("lbl", r.label);
     r.leds = WEIGHTS.map((w, i) => {
-      const d = document.createElement("div");
-      d.className = "led row-" + r.key + (i < 6 - r.bits ? " none" : "");
+      const d = div("led row-" + r.key + (i < 6 - r.bits ? " none" : ""));
       d.title = w;
-      bin.appendChild(d);
       return d;
     });
-    r.val = document.createElement("div"); r.val.className = "val"; bin.appendChild(r.val);
+    r.val = div("val");
   });
-  const bitsEl = document.getElementById("bits");
-  const digBin = document.getElementById("digBin");
 
-  // --- aktualizácia ---
-  const segLabel = document.getElementById("segLabel");
-  const dig8 = document.getElementById("dig8");
-  const info8 = document.getElementById("info8");
+  // ---------- aktualizácia ----------
+  const dateFmt = new Intl.DateTimeFormat("sk-SK", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const trackSpans = [...$("track").children];
+  const tlLabels = [...$("tlLabels").children];
   let lastSeg = -1, lastSec = -1;
 
   function tick() {
@@ -219,42 +346,53 @@
     const hrs = h + mm / 60;
     const seg = Math.floor(h / 8);
     const start = seg * 8;
+    const inSeg = hrs - start;
+    const a = inSeg / 8 * 360;
 
     if (seg !== lastSeg) {
       lastSeg = seg;
       document.body.dataset.seg = seg;
-      nums.forEach((t, i) => t.textContent = start + i);
-      segText.textContent = `${start}:00 – ${start + 8}:00`;
-      const S = SEGMENTS[seg];
-      segLabel.innerHTML = `${S.icon} <b>${S.name}</b> · ${start}:00 – ${start + 8}:00`;
+      nums.forEach((n, i) => n.t.textContent = start + i);
+      $("chip").textContent = `${SEGMENTS[seg]} · ${start}–${start + 8} h`;
+      $("segTag").textContent = SEGMENTS[seg];
+      trackSpans.forEach((t, i) => t.classList.toggle("active", i === seg));
+      tlLabels.forEach((t, i) => t.classList.toggle("active", i === seg));
     }
 
-    const inSeg = hrs - start;              // 0 … 8
-    const a = inSeg / 8 * 360;
     hHand.setAttribute("transform", `rotate(${a})`);
     mHand.setAttribute("transform", `rotate(${mm * 6})`);
     sHand.setAttribute("transform", `rotate(${s * 6})`);
-    progress.setAttribute("d", arc(a));
+    ring.setAttribute("d", arc(a));
 
     if (sec !== lastSec) {
       lastSec = sec;
-      nums.forEach((t, i) => t.classList.toggle("now", start + i === h));
+      $("bigTime").innerHTML = `${p2(h)}:${p2(m)}<span class="sec">${p2(sec)}</span>`;
+      $("date").textContent = dateFmt.format(now);
+      $("marker").style.left = (hrs / 24 * 100) + "%";
+
+      nums.forEach((n, i) => {
+        const cur = start + i === h;
+        n.t.classList.toggle("now", cur);
+        if (cur) { nowBg.setAttribute("cx", n.x); nowBg.setAttribute("cy", n.y); }
+      });
       const left = 8 * 60 - (h - start) * 60 - m;
-      dig8.textContent = `${p2(h)}:${p2(m)}:${p2(sec)}`;
-      info8.innerHTML =
-        `hodina úseku: <b>${h - start + 1}. z 8</b> · prejdené <b>${(inSeg / 8 * 100).toFixed(0)} %</b><br>` +
-        `do konca úseku: <b>${Math.floor(left / 60)} h ${left % 60} min</b>`;
+      $("stHour").textContent = `${h - start + 1}/8`;
+      $("stPct").textContent = `${Math.floor(inSeg / 8 * 100)} %`;
+      $("stLeft").textContent = `${Math.floor(left / 60)}:${p2(left % 60)}`;
 
       const vals = { h, m, s: sec };
-      const strs = [];
+      const parts = [];
       ROWS.forEach(r => {
         const v = vals[r.key];
         r.leds.forEach((d, i) => d.classList.toggle("on", (v & WEIGHTS[i]) !== 0));
         r.val.textContent = v;
-        strs.push(v.toString(2).padStart(r.bits, "0"));
+        parts.push(`<span class="${r.key}1">${v.toString(2).padStart(r.bits, "0")}</span>`);
       });
-      bitsEl.textContent = strs.join(" : ");
-      digBin.textContent = `${p2(h)}:${p2(m)}:${p2(sec)}`;
+      $("bits").innerHTML = parts.join('<span class="sep"> : </span>');
+      $("hint").innerHTML = ROWS.map(r => {
+        const v = vals[r.key], sum = WEIGHTS.filter(w => v & w);
+        return `<div>${r.label}: ${sum.length ? sum.join(" + ") : "0"} = <b>${v}</b></div>`;
+      }).join("");
     }
     requestAnimationFrame(tick);
   }
