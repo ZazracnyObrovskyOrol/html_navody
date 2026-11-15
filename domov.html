@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Offline úvodná stránka v jednom súbore – odkazy na služby v sieti a záložky, kontrola dostupnosti a úpravy priamo na stránke. Funguje aj bez servera.">
 <title>Domov</title>
+<meta name="version" content="1.0">
+<!-- favicon: neónový terč -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3Cfilter id='g' x='-30%' y='-30%' width='160%' height='160%'%3E%3CfeGaussianBlur stdDeviation='1.6' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230b0f1a'/%3E%3Cg fill='none' stroke-width='5' filter='url(%23g)'%3E%3Ccircle cx='32' cy='32' r='24' stroke='%23ff2bd6'/%3E%3Ccircle cx='32' cy='32' r='15.5' stroke='%2300e5ff'/%3E%3C/g%3E%3Ccircle cx='32' cy='32' r='7' fill='%23b6ff00' filter='url(%23g)'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#0d1117; --bg2:#121826; --panel:#161c27; --panel2:#1d2533; --line:#283143;
@@ -277,6 +280,7 @@ function safeHref(h) {
 function hostOf(url) { try { return new URL(url).host; } catch (e) { return ''; } }
 
 /* ================= stav ================= */
+const VERZIA = '1.0';
 const DEFAULTS = { nazov: 'Domov', novaKarta: true, tema: 'auto', kontrolaSekundy: 60 };
 let data = null, example = false, editMode = false;
 let filter = store.get('domov-filter', '*');
@@ -860,7 +864,8 @@ function openSettings() {
       el('button', { type: 'button', class: 'btn', text: '⇪ Import', onclick: () => file.click() }),
       fileData() ? el('button', { type: 'button', class: 'btn', text: '⟳ Načítať z odkazy.js', onclick: () => { document.querySelector('dialog')?.close(); reloadFromFile(); } }) : null,
       file),
-    el('p', { class: 'hint', text: 'Úpravy sa ukladajú v tomto prehliadači. Aby boli natrvalo (aj v inom prehliadači), stiahni odkazy.js a nahraď ním súbor vedľa domov.html. Súbor odkazy.js nejde na GitHub.' })
+    el('p', { class: 'hint', text: 'Úpravy sa ukladajú v tomto prehliadači. Aby boli natrvalo (aj v inom prehliadači), stiahni odkazy.js a nahraď ním súbor vedľa domov.html. Súbor odkazy.js nejde na GitHub.' }),
+    el('p', { class: 'hint', text: 'domov.html – verzia ' + VERZIA })
   ];
   const dlg = dialog('Nastavenia', body, [{ label: 'Zrušiť' }, { label: 'Uložiť', cls: 'primary', fn: () => {
     savedLayout = true;
