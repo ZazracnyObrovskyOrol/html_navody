@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor odkazov – odkazy.js</title>
+<meta name="description" content="Pohodlná úprava súboru odkazy.js pre domov.html – import, úprava sekcií, skupín a odkazov, presúvanie myšou, náhľad ikon a export späť do odkazy.js.">
+<style>
+:root{
+  --bg:#f3f5f9; --panel:#fff; --panel2:#f6f8fb; --line:#dfe4ec; --line2:#c9d1dd;
+  --text:#1a2030; --muted:#667085; --accent:#2563eb; --accent-soft:rgba(37,99,235,.10);
+  --ok:#16a34a; --bad:#dc2626; --bad-soft:rgba(220,38,38,.08); --warn:#b45309;
+  --sub:#7c3aed; --shadow:0 6px 20px -12px rgba(20,30,60,.3);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0d1117; --panel:#161c27; --panel2:#1d2533; --line:#283143; --line2:#36415a;
+    --text:#e7eaf0; --muted:#8d97ab; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
+    --ok:#3ecf8e; --bad:#f06464; --bad-soft:rgba(240,100,100,.10); --warn:#e0a040;
+    --sub:#a083f0; --shadow:0 10px 30px -12px rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--panel2);padding:1px 5px;border-radius:4px}
+
+/* ---------- horná lišta ---------- */
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .in{max-width:1700px;margin:0 auto;padding:10px 18px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.top h1{margin:0;font-size:1.25rem;line-height:1.2}
+.top .lead{margin:0;color:var(--muted);font-size:.82rem}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
+.sep{width:1px;height:24px;background:var(--line)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+.bar2{max-width:1700px;margin:0 auto;padding:0 18px 10px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.search{flex:1 1 280px;max-width:520px;padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);outline:none}
+.search:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);
+  background:var(--panel);font-size:.8rem;color:var(--muted)}
+.pill.dirty{color:var(--warn);border-color:var(--warn)}
+.pill.clean{color:var(--ok)}
+.pill.bad{color:var(--bad);border-color:var(--bad);cursor:pointer}
+.stats{color:var(--muted);font-size:.82rem}
+
+main{max-width:1700px;margin:0 auto;padding:14px 18px 120px}
+.banner{border:1px solid var(--line2);border-left:4px solid var(--accent);background:var(--panel);border-radius:10px;
+  padding:10px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.banner.err{border-left-color:var(--bad)}
+.banner .msg{flex:1 1 300px}
+
+/* ---------- boxy ---------- */
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:16px}
+.box>.head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 14px}
+.box>.body{padding:4px 14px 14px}
+.box.collapsed>.body{display:none}
+.kind{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.count{font-size:.78rem;color:var(--muted)}
+.grow{flex:1}
+.settings .body{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 16px;align-items:end}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:.8rem;color:var(--muted)}
+label.chk{display:flex;gap:8px;align-items:center;padding-bottom:7px}
+
+input[type=text],input[type=number],select,textarea{
+  width:100%;min-width:0;padding:5px 8px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--panel)}
+input.bad{border-color:var(--bad);background:var(--bad-soft)}
+input.title{font-weight:600;font-size:1rem;max-width:340px}
+.sec>.head input.title{font-size:1.15rem}
+.sec>.head select{width:auto}
+
+/* sekcia */
+.sec{border-width:2px}
+.sec>.body{display:flex;flex-direction:column;gap:12px}
+
+/* skupina */
+.grp{border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+.grp>.head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:7px 10px;background:var(--panel2);border-radius:11px 11px 0 0}
+.grp.collapsed>.head{border-radius:11px}
+.grp>.body{padding:6px 10px 10px;display:flex;flex-direction:column;gap:4px}
+.grp.collapsed>.body{display:none}
+.grp .grp{margin-top:8px;border-color:color-mix(in srgb,var(--sub) 45%,var(--line))}
+.grp .grp>.head{background:color-mix(in srgb,var(--sub) 8%,var(--panel2))}
+.grp .grp .kind{color:var(--sub)}
+.grp>.head input.title{max-width:260px;font-size:.95rem}
+
+/* riadky odkazov */
+.cols,.row{display:grid;gap:6px;align-items:center;
+  grid-template-columns:16px 30px minmax(110px,1fr) minmax(170px,1.6fr) minmax(110px,.9fr) 58px minmax(90px,.8fr) minmax(150px,1.2fr) 146px;
+  grid-template-areas:"h i n u k s p c a"}
+.cols{font-size:.72rem;color:var(--muted);padding:2px 0 0}
+.cols span:nth-child(1){grid-area:n}.cols span:nth-child(2){grid-area:u}.cols span:nth-child(3){grid-area:k}
+.cols span:nth-child(4){grid-area:s}.cols span:nth-child(5){grid-area:p}.cols span:nth-child(6){grid-area:c}
+.row{padding:3px 4px;border-radius:8px;border:1px solid transparent}
+.row:hover{background:var(--panel2)}
+.row.invalid{border-color:var(--bad)}
+.row .h{grid-area:h}.row .ico{grid-area:i}.row .n{grid-area:n}.row .u{grid-area:u}.row .k{grid-area:k}
+.row .s{grid-area:s}.row .p{grid-area:p}.row .c{grid-area:c}.row .a{grid-area:a}
+.inl{display:flex;gap:4px;min-width:0}
+.acts{display:flex;gap:2px}
+@media (max-width:1150px){
+  .cols{display:none}
+  .row{grid-template-columns:16px 30px 1fr 1fr 1fr;
+    grid-template-areas:"h i n u u" ". . k s p" ". . c c a";padding:6px 4px;border-color:var(--line)}
+}
+@media (max-width:640px){
+  .row{grid-template-columns:16px 30px 1fr;grid-template-areas:"h i n" ". . u" ". . k" ". . s" ". . p" ". . c" ". . a"}
+}
+
+.handle{cursor:grab;color:var(--muted);user-select:none;text-align:center;font-size:15px;line-height:1}
+.handle:active{cursor:grabbing}
+.mini{border:1px solid transparent;background:none;border-radius:6px;padding:2px 6px;cursor:pointer;color:var(--muted);line-height:1.3;min-width:26px}
+.mini:hover{border-color:var(--line2);color:var(--text);background:var(--panel)}
+.mini.del:hover{color:var(--bad);border-color:var(--bad)}
+.mini.txt{font-size:.8rem}
+.add{border:1px dashed var(--line2);background:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--muted);text-align:left}
+.add:hover{border-color:var(--accent);color:var(--accent)}
+.add.big{width:100%;padding:12px;text-align:center;font-size:1rem}
+.empty{color:var(--muted);font-size:.85rem;padding:6px 2px}
+
+/* ikona */
+.ico{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;overflow:hidden;flex:none;
+  background:#e8ecf3;font-size:15px;font-weight:700;color:#fff}
+.ico img{width:100%;height:100%;object-fit:contain;padding:3px}
+.ico.ph{font-size:.68rem}
+.ico.miss{outline:2px solid var(--bad);outline-offset:1px}
+@media (prefers-color-scheme: light){ .ico:not(.ph){background:transparent} .ico:not(.ph) img{padding:0} }
+
+/* ťahanie */
+.dragging{opacity:.4}
+.drop-before{box-shadow:inset 0 3px 0 var(--accent)}
+.drop-after{box-shadow:inset 0 -3px 0 var(--accent)}
+.drop-into{outline:2px dashed var(--accent);outline-offset:2px}
+body.filedrag::after{content:"Pusti súbor odkazy.js sem";position:fixed;inset:12px;z-index:99;display:grid;place-items:center;
+  border:3px dashed var(--accent);border-radius:20px;background:color-mix(in srgb,var(--bg) 85%,transparent);font-size:1.6rem;font-weight:600}
+
+/* náhľad a pomoc */
+details.out{margin-top:20px}
+details.out summary{cursor:pointer;font-weight:600;padding:6px 0}
+details.out pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow:auto;
+  max-height:70vh;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace}
+.help{color:var(--muted);font-size:.86rem}
+.help li{margin:3px 0}
+
+/* dialóg a toast */
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--text);padding:0;width:min(560px,94vw);box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h3{margin:0;padding:14px 18px 6px}
+dialog .dbody{padding:6px 18px;display:flex;flex-direction:column;gap:10px}
+dialog .dbtn{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px 16px}
+dialog textarea{min-height:260px;font:12.5px/1.4 ui-monospace,Menlo,Consolas,monospace}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100;background:var(--text);color:var(--bg);
+  border-radius:10px;padding:9px 14px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);max-width:92vw}
+.toast button{background:none;border:1px solid currentColor;color:inherit;border-radius:7px;padding:2px 9px;cursor:pointer}
+.hidden-by-search{display:none!important}
+mark{background:color-mix(in srgb,var(--accent) 30%,transparent);color:inherit;border-radius:3px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <div>
+      <h1>Editor odkazov</h1>
+      <p class="lead">Úprava súboru <code>odkazy.js</code> pre <a href="domov.html" target="_blank" rel="noopener">domov.html</a> – importuj, uprav, stiahni.</p>
+    </div>
+    <div class="tools">
+      <button class="btn" id="bNew" title="Začať s prázdnymi odkazmi">✚ Nový</button>
+      <button class="btn" id="bReload" title="Znova načítať súbor odkazy.js vedľa tejto stránky">⟳ Načítať odkazy.js</button>
+      <button class="btn" id="bImport" title="Vybrať súbor .js alebo .json (alebo ho pretiahni do okna)">⇪ Import súboru</button>
+      <button class="btn" id="bPaste" title="Vložiť obsah odkazy.js ako text">📋 Vložiť text</button>
+      <button class="btn" id="bFromHome" title="Prevziať úpravy, ktoré si spravil priamo v domov.html (v tomto prehliadači)">⌂ Z domov.html</button>
+      <span class="sep"></span>
+      <button class="btn" id="bUndo" title="Späť (Ctrl+Z)">↶</button>
+      <button class="btn" id="bRedo" title="Znova (Ctrl+Y)">↷</button>
+      <span class="sep"></span>
+      <button class="btn" id="bCopy" title="Skopírovať obsah odkazy.js do schránky">⧉ Kopírovať</button>
+      <button class="btn" id="bToHome" title="Zapísať odkazy do domov.html v tomto prehliadači">⌂ Do domov.html</button>
+      <button class="btn primary" id="bExport" title="Stiahnuť odkazy.js (Ctrl+S)">⇩ Stiahnuť odkazy.js</button>
+      <input type="file" id="file" accept=".js,.json,application/json,text/javascript" hidden>
+    </div>
+  </div>
+  <div class="bar2">
+    <input class="search" id="q" type="search" placeholder="Hľadať odkaz, adresu, skupinu…  ( / )" autocomplete="off">
+    <button class="btn" id="bCollapse">▸ Zbaliť skupiny</button>
+    <button class="btn" id="bExpand">▾ Rozbaliť</button>
+    <span class="stats" id="stats"></span>
+    <span class="pill" id="problems" hidden></span>
+    <span class="pill" id="state"></span>
+  </div>
+</header>
+
+<main>
+  <div id="banner"></div>
+  <div id="editor"></div>
+
+  <details class="out" id="nahlad">
+    <summary>Náhľad súboru odkazy.js</summary>
+    <pre id="out"></pre>
+  </details>
+
+  <details class="out help" open>
+    <summary>Ako na to</summary>
+    <ul>
+      <li><b>Načítanie:</b> ak je <code>odkazy.js</code> vedľa tejto stránky, načíta sa sám. Inak ho naimportuj, vlož ako text alebo pretiahni súbor do okna.</li>
+      <li><b>Úpravy</b> sa priebežne ukladajú v prehliadači ako koncept – po zatvorení okna o ne neprídeš. Natrvalo ich uložíš tlačidlom <b>⇩ Stiahnuť odkazy.js</b> a nahradením súboru vedľa <code>domov.html</code>.</li>
+      <li><b>Presúvanie:</b> chyť <b>⠿</b> a ťahaj odkaz alebo skupinu – aj do inej skupiny. Odkaz pustený na hlavičku skupiny sa pridá na jej koniec. Alebo použi <b>⇄</b>.</li>
+      <li><b>Ikona:</b> názov z <a href="https://dashboardicons.com/icons" target="_blank" rel="noopener">dashboardicons.com</a> (napr. <code>proxmox</code>), <code>mdi-…</code> (<a href="https://pictogrammers.com/library/mdi/" target="_blank" rel="noopener">Material Design Icons</a>), <code>si-…</code> (<a href="https://simpleicons.org/" target="_blank" rel="noopener">Simple Icons</a>), adresa obrázka alebo emoji. Červený rámik = ikona sa nenašla. Bez ikony sa zobrazí <b>skratka</b> (max. 3 znaky) alebo prvé písmeno názvu.</li>
+      <li><b>Kontrola</b> – adresa alebo IP, ktorej dostupnosť domov.html sleduje (zelená/červená bodka). Tlačidlo <b>↺</b> ju doplní z odkazu.</li>
+      <li><b>Štýl sekcie:</b> <i>Karty</i> = veľké dlaždice (služby), <i>Kompaktne</i> = malé záložky.</li>
+      <li><b>Skratky:</b> <code>Ctrl+Z</code> späť, <code>Ctrl+Y</code> znova, <code>Ctrl+S</code> stiahnuť, <code>/</code> hľadať.</li>
+      <li><b>⌂ Z domov.html / Do domov.html</b> funguje, keď sú obe stránky otvorené z rovnakej adresy (napr. cez server <code>http://localhost:8080/</code>).</li>
+    </ul>
+  </details>
+</main>
+
+<datalist id="ikony"></datalist>
+<dialog id="dlg"></dialog>
+
+<!-- Súbor odkazy.js vedľa stránky (ODKAZY = {...}). Ak chýba, editor začne s prázdnymi odkazmi. -->
+<script src="odkazy.js"></script>
+<script>
+(() => {
+'use strict';
+
+/* ================= pomocné ================= */
+const $ = s => document.querySelector(s);
+const S = v => v == null ? '' : String(v);
+function el(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else e.setAttribute(k, v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c);
+  return e;
+}
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+const isGroup = n => !!n && Array.isArray(n.polozky);
+const fold = s => S(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+/* ================= formát odkazy.js ================= */
+const HEADER = '// Osobné odkazy pre domov.html – tento súbor nejde na GitHub (.gitignore).\n';
+const DEFAULTS = { nazov: 'Domov', novaKarta: true, tema: 'auto', kontrolaSekundy: 60 };
+const ITEM_KEYS = ['nazov', 'ikona', 'skratka', 'url', 'popis', 'kontrola'];
+const STYLY = [['karty', 'Karty – veľké dlaždice'], ['kompaktne', 'Kompaktne – malé záložky']];
+const DRAFT_KEY = 'odkazy-editor-koncept';
+const HOME_KEY = 'domov-odkazy';   // kde si domov.html ukladá úpravy
+
+function normGroup(g) {
+  g.nazov = S(g.nazov);
+  if (!Array.isArray(g.polozky)) g.polozky = [];
+  g.polozky.forEach(n => { if (isGroup(n)) normGroup(n); });
+}
+function normalize(d) {
+  d = clone(d || {});
+  d.nastavenia = Object.assign({}, DEFAULTS, d.nastavenia || {});
+  if (!Array.isArray(d.sekcie)) d.sekcie = [];
+  d.sekcie.forEach(s => { s.nazov = S(s.nazov); if (!Array.isArray(s.skupiny)) s.skupiny = []; s.skupiny.forEach(normGroup); });
+  return d;
+}
+// výstup: prázdne polia vynechať, kľúče v stálom poradí, neznáme kľúče zachovať
+function cleanItem(it) {
+  const o = {};
+  for (const k of ITEM_KEYS) { const v = S(it[k]).trim(); if (v) o[k] = v; }
+  for (const [k, v] of Object.entries(it)) if (!ITEM_KEYS.includes(k)) o[k] = v;
+  return o;
+}
+function cleanGroup(g) {
+  const o = { nazov: S(g.nazov).trim() };
+  for (const [k, v] of Object.entries(g)) if (k !== 'nazov' && k !== 'polozky') o[k] = v;
+  o.polozky = g.polozky.map(n => isGroup(n) ? cleanGroup(n) : cleanItem(n));
+  return o;
+}
+function cleanSection(s) {
+  const o = { nazov: S(s.nazov).trim() };
+  if (s.styl) o.styl = s.styl;
+  for (const [k, v] of Object.entries(s)) if (!['nazov', 'styl', 'skupiny'].includes(k)) o[k] = v;
+  o.skupiny = s.skupiny.map(cleanGroup);
+  return o;
+}
+function cleanData(d = data) {
+  const st = d.nastavenia;
+  const n = { nazov: S(st.nazov).trim() || 'Domov', novaKarta: !!st.novaKarta, tema: st.tema || 'auto',
+    kontrolaSekundy: Math.max(0, Number(st.kontrolaSekundy) || 0) };
+  for (const [k, v] of Object.entries(st)) if (!(k in n)) n[k] = v;
+  const o = { nastavenia: n };
+  for (const [k, v] of Object.entries(d)) if (k !== 'nastavenia' && k !== 'sekcie') o[k] = v;
+  o.sekcie = d.sekcie.map(cleanSection);
+  return o;
+}
+const toJs = (d = data) => HEADER + 'ODKAZY = ' + JSON.stringify(cleanData(d), null, 2) + ';\n';
+const sig = d => JSON.stringify(cleanData(normalize(d)));
+
+function parseText(txt) {
+  const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
+  if (a < 0 || b < a) throw new Error('v texte nie je objekt { … }');
+  const body = txt.slice(a, b + 1);
+  let d;
+  try { d = JSON.parse(body); }
+  catch (e) {
+    // ručne písaný JS objekt (kľúče bez úvodzoviek, čiarka na konci…)
+    try { d = Function('"use strict";return (' + body + ');')(); }
+    catch (e2) { throw new Error('neplatný formát – ' + e.message); }
+  }
+  if (!d || typeof d !== 'object' || !Array.isArray(d.sekcie)) throw new Error('chýba zoznam „sekcie“');
+  return d;
+}
+function fileData() {
+  const d = window.ODKAZY;
+  return d && typeof d === 'object' && Array.isArray(d.sekcie) ? d : null;
+}
+const EMPTY = () => ({ nastavenia: { ...DEFAULTS }, sekcie: [
+  { nazov: 'Služby', styl: 'karty', skupiny: [{ nazov: 'Domáca sieť', polozky: [] }] },
+  { nazov: 'Záložky', styl: 'kompaktne', skupiny: [{ nazov: 'Web', polozky: [] }] }
+] });
+
+/* ================= stav, história, koncept ================= */
+let data = null;
+let baseSig = '';          // stav pri poslednom načítaní/exporte → „neexportované zmeny“
+let snap = '';
+const undoStack = [], redoStack = [];
+const collapsed = new WeakSet();
+
+function setData(d, { base = false, msg = '' } = {}) {
+  if (snap) { undoStack.push(snap); redoStack.length = 0; }
+  data = normalize(d);
+  snap = JSON.stringify(data);
+  if (base) baseSig = JSON.stringify(cleanData());
+  render();
+  saveDraft();
+  if (msg) toast(msg, undoStack.length ? 'Vrátiť' : null, undo);
+}
+function commit() {
+  const j = JSON.stringify(data);
+  if (j === snap) return;
+  undoStack.push(snap); if (undoStack.length > 300) undoStack.shift();
+  redoStack.length = 0; snap = j;
+  later();
+}
+// zmena štruktúry: zapísať do histórie a prekresliť
+function mutate(fn) { fn(); commit(); render(); }
+function undo() {
+  if (!undoStack.length) return toast('Nie je čo vrátiť.');
+  redoStack.push(snap); snap = undoStack.pop(); data = JSON.parse(snap); render(); saveDraft();
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(snap); snap = redoStack.pop(); data = JSON.parse(snap); render(); saveDraft();
+}
+function saveDraft() { store.set(DRAFT_KEY, { cas: Date.now(), data, base: baseSig }); }
+const later = debounce(() => { saveDraft(); updatePreview(); updateStatus(); }, 250);
+
+/* ================= ikony (rovnako ako domov.html) ================= */
+const ICON_CDN = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/';
+const ICONIFY = { mdi: 'mdi', si: 'simple-icons' };
+function hue(s) { let h = 0; for (const c of S(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 45% 45%)`; }
+function paintIcon(box, it) {
+  box.replaceChildren(); box.className = 'ico'; box.style.background = ''; box.title = '';
+  const avatar = () => {
+    box.classList.add('ph'); box.style.background = hue(it.nazov);
+    box.textContent = S(it.skratka).trim() ? S(it.skratka).trim().slice(0, 3) : (S(it.nazov).trim().slice(0, 1).toUpperCase() || '?');
+  };
+  const miss = () => { box.classList.add('miss'); box.title = 'Ikona sa nenašla'; };
+  const ic = S(it.ikona).trim();
+  if (!ic) { avatar(); return; }
+  const img = el('img', { alt: '', draggable: 'false' });
+  const m = /^(mdi|si)-(.+)$/i.exec(ic);
+  if (m) {
+    avatar();
+    img.onload = () => { box.replaceChildren(img); };
+    img.onerror = miss;
+    img.src = `https://api.iconify.design/${ICONIFY[m[1].toLowerCase()]}/${encodeURIComponent(m[2].toLowerCase())}.svg?color=%23ffffff`;
+    return;
+  }
+  if (/[^\x00-\x7F]/.test(ic) && ic.length <= 8) { box.textContent = ic; box.style.background = 'transparent'; return; }
+  const isUrl = /^https?:\/\//i.test(ic);
+  if (!isUrl && !/^[a-z0-9][a-z0-9._-]*$/i.test(ic)) { avatar(); miss(); return; }
+  img.onerror = () => { avatar(); miss(); };
+  img.src = isUrl ? ic : ICON_CDN + ic.toLowerCase().replace(/\.(png|svg|webp)$/, '') + '.png';
+  box.append(img);
+}
+function iconBox(it) { const b = el('span', { class: 'ico' }); paintIcon(b, it); return b; }
+function fillIconList() {
+  const used = new Set(['mdi-link', 'mdi-cctv', 'mdi-server', 'mdi-router-wireless', 'mdi-home', 'mdi-web', 'mdi-thermometer',
+    'proxmox', 'home-assistant', 'mikrotik', 'router', 'github', 'youtube', 'gmail', 'reddit', 'pi-hole', 'adguard-home',
+    'portainer', 'immich', 'syncthing', 'frigate', 'caddy', 'nextcloud', 'jellyfin', 'plex', 'grafana', 'unifi', 'synology', 'truenas']);
+  walkItems(it => { const v = S(it.ikona).trim(); if (v && !/^https?:/i.test(v)) used.add(v); });
+  $('#ikony').replaceChildren(...[...used].sort().map(v => el('option', { value: v })));
+}
+
+/* ================= prechádzanie dát ================= */
+function walkItems(fn) {
+  const walk = (arr, path) => arr.forEach(n => isGroup(n) ? walk(n.polozky, path.concat(n.nazov)) : fn(n, arr, path));
+  data.sekcie.forEach(s => s.skupiny.forEach(g => walk(g.polozky, [s.nazov, g.nazov])));
+}
+function allGroups() {
+  const out = [];
+  const walk = (arr, path, depth, sec) => arr.forEach(n => {
+    if (!isGroup(n)) return;
+    out.push({ g: n, parent: arr, label: path.concat(n.nazov || '(bez názvu)').join(' › '), depth, sec });
+    walk(n.polozky, path.concat(n.nazov || '(bez názvu)'), depth + 1, sec);
+  });
+  data.sekcie.forEach(s => walk(s.skupiny, [s.nazov || '(bez názvu)'], 0, s));
+  return out;
+}
+const contains = (g, target) => g === target || g.polozky.some(n => isGroup(n) && contains(n, target));
+const urlBad = v => { v = S(v).trim(); return !!v && !/^[a-z][a-z0-9+.-]*:/i.test(v); };
+const itemBad = it => !S(it.nazov).trim() || urlBad(it.url);
+
+/* ================= vykreslenie ================= */
+function txt(obj, key, ph, opts = {}) {
+  const i = el('input', { type: 'text', placeholder: ph, class: opts.cls, list: opts.list, spellcheck: 'false' });
+  i.value = S(obj[key]);
+  i.addEventListener('input', () => { obj[key] = i.value; opts.onInput?.(); later(); });
+  i.addEventListener('change', () => {
+    let v = i.value.trim();
+    if (opts.fix) v = opts.fix(v);
+    obj[key] = v; i.value = v; opts.onInput?.(); commit();
+  });
+  return i;
+}
+function mini(text, title, fn, cls) {
+  return el('button', { type: 'button', class: 'mini ' + (cls || ''), text, title, onclick: fn });
+}
+// presun medzi súrodencami rovnakého druhu (odkaz ↔ odkaz, skupina ↔ skupina)
+function step(arr, obj, dir) {
+  const same = n => isGroup(n) === isGroup(obj);
+  let i = arr.indexOf(obj), j = i + dir;
+  while (j >= 0 && j < arr.length && !same(arr[j])) j += dir;
+  if (j < 0 || j >= arr.length) return;
+  mutate(() => { arr.splice(i, 1); arr.splice(j, 0, obj); });
+}
+
+function render() {
+  const scroll = window.scrollY;
+  const ed = $('#editor');
+  ed.replaceChildren(settingsBox());
+  data.sekcie.forEach((sec, i) => ed.append(sectionEl(sec, i)));
+  ed.append(el('button', { type: 'button', class: 'add big', text: '＋ Pridať sekciu', onclick: () => {
+    mutate(() => data.sekcie.push({ nazov: 'Nová sekcia', styl: 'karty', skupiny: [{ nazov: 'Nová skupina', polozky: [] }] }));
+    focusLast('.sec > .head input.title');
+  } }));
+  fillIconList();
+  applySearch();
+  updatePreview();
+  updateStatus();
+  window.scrollTo(0, scroll);
+}
+function focusGroup(g) {
+  const box = [...document.querySelectorAll('.grp')].find(b => b._g === g);
+  const i = box?.querySelector(':scope > .head input.title');
+  if (i) { i.focus(); i.select(); i.scrollIntoView({ block: 'center' }); }
+}
+function focusLast(sel) { const all = document.querySelectorAll(sel); const x = all[all.length - 1]; if (x) { x.focus(); x.select?.(); x.scrollIntoView({ block: 'center' }); } }
+
+function settingsBox() {
+  const st = data.nastavenia;
+  const tema = el('select', {}, [['auto', 'Podľa systému'], ['dark', 'Tmavá'], ['light', 'Svetlá']].map(([v, l]) => el('option', { value: v, text: l })));
+  tema.value = st.tema || 'auto';
+  tema.addEventListener('change', () => { st.tema = tema.value; commit(); });
+  const sec = el('input', { type: 'number', min: '0', max: '3600', step: '5' });
+  sec.value = st.kontrolaSekundy;
+  sec.addEventListener('change', () => { st.kontrolaSekundy = Math.max(0, Number(sec.value) || 0); sec.value = st.kontrolaSekundy; commit(); });
+  const nova = el('input', { type: 'checkbox' }); nova.checked = !!st.novaKarta;
+  nova.addEventListener('change', () => { st.novaKarta = nova.checked; commit(); });
+  const box = el('div', { class: 'box settings' + (collapsed.has(st) ? ' collapsed' : '') },
+    el('div', { class: 'head' }, toggleBtn(st), el('span', { class: 'kind', text: 'Nastavenia stránky' })),
+    el('div', { class: 'body' },
+      el('label', { class: 'f' }, 'Názov stránky (nadpis v domov.html)', txt(st, 'nazov', 'Domov')),
+      el('label', { class: 'f' }, 'Téma', tema),
+      el('label', { class: 'f' }, 'Kontrola dostupnosti každých … sekúnd (0 = vypnutá)', sec),
+      el('label', { class: 'chk' }, nova, 'Otvárať odkazy v novej karte')));
+  return box;
+}
+function toggleBtn(obj) {
+  const b = mini(collapsed.has(obj) ? '▸' : '▾', 'Zbaliť / rozbaliť', () => {
+    const box = b.closest('.box, .grp');
+    if (collapsed.has(obj)) collapsed.delete(obj); else collapsed.add(obj);
+    box.classList.toggle('collapsed', collapsed.has(obj));
+    b.textContent = collapsed.has(obj) ? '▸' : '▾';
+  });
+  return b;
+}
+
+function sectionEl(sec, idx) {
+  const styl = el('select', { title: 'Vzhľad sekcie v domov.html' }, STYLY.map(([v, l]) => el('option', { value: v, text: l })));
+  if (sec.styl && !STYLY.some(([v]) => v === sec.styl)) styl.append(el('option', { value: sec.styl, text: sec.styl }));
+  styl.value = sec.styl || 'karty';
+  styl.addEventListener('change', () => { sec.styl = styl.value; commit(); });
+  let nItems = 0, nGroups = 0;
+  const cnt = arr => arr.forEach(n => { if (isGroup(n)) { nGroups++; cnt(n.polozky); } else nItems++; });
+  cnt(sec.skupiny);
+
+  const body = el('div', { class: 'body' });
+  sec.skupiny.forEach(g => body.append(groupEl(g, sec.skupiny, 0)));
+  if (!sec.skupiny.length) body.append(el('div', { class: 'empty', text: 'Sekcia je prázdna – pridaj skupinu.' }));
+  const addG = el('button', { type: 'button', class: 'add', text: '＋ Pridať skupinu', onclick: () => {
+    const ng = { nazov: 'Nová skupina', polozky: [] };
+    mutate(() => sec.skupiny.push(ng));
+    focusGroup(ng);
+  } });
+  dropInto(addG, sec.skupiny, 'group');
+  body.append(addG);
+
+  return el('div', { class: 'box sec' + (collapsed.has(sec) ? ' collapsed' : ''), 'data-i': idx },
+    el('div', { class: 'head' },
+      toggleBtn(sec), el('span', { class: 'kind', text: 'Sekcia' }),
+      txt(sec, 'nazov', 'Názov sekcie', { cls: 'title' }), styl,
+      el('span', { class: 'count', text: `${nGroups} skup. · ${nItems} odkazov` }),
+      el('span', { class: 'grow' }),
+      mini('↑', 'Posunúť sekciu vyššie', () => idx > 0 && mutate(() => data.sekcie.splice(idx - 1, 0, ...data.sekcie.splice(idx, 1)))),
+      mini('↓', 'Posunúť sekciu nižšie', () => idx < data.sekcie.length - 1 && mutate(() => data.sekcie.splice(idx + 1, 0, ...data.sekcie.splice(idx, 1)))),
+      mini('✕', 'Zmazať sekciu', () => {
+        const really = () => { mutate(() => data.sekcie.splice(idx, 1)); toast(`Sekcia „${sec.nazov}“ zmazaná.`, 'Vrátiť', undo); };
+        if (!nItems && !nGroups) really();
+        else confirmDlg(`Zmazať sekciu „${sec.nazov}“?`, `Obsahuje ${nGroups} skupín a ${nItems} odkazov.`, really);
+      }, 'del')),
+    body);
+}
+
+function groupEl(g, parent, depth) {
+  const items = g.polozky.filter(n => !isGroup(n));
+  const subs = g.polozky.filter(isGroup);
+  let total = 0; const cnt = arr => arr.forEach(n => isGroup(n) ? cnt(n.polozky) : total++); cnt(g.polozky);
+
+  const body = el('div', { class: 'body' });
+  if (items.length) body.append(el('div', { class: 'cols' }, ['Názov', 'Odkaz (URL)', 'Ikona', 'Skratka', 'Popis', 'Kontrola dostupnosti'].map(t => el('span', { text: t }))));
+  items.forEach(it => body.append(rowEl(it, g.polozky)));
+  const addI = el('button', { type: 'button', class: 'add', text: '＋ Pridať odkaz', onclick: () => {
+    const it = { nazov: '', ikona: '', url: '' };
+    mutate(() => g.polozky.splice(firstGroupIndex(g.polozky), 0, it));
+    const row = [...document.querySelectorAll('.row')].find(r => r._it === it);
+    row?.querySelector('.n input')?.focus();
+  } });
+  dropInto(addI, g.polozky, 'item');
+  body.append(addI);
+  subs.forEach(s => body.append(groupEl(s, g.polozky, depth + 1)));
+
+  const handle = el('span', { class: 'handle', text: '⠿', title: 'Chyť a ťahaj skupinu' });
+  const head = el('div', { class: 'head' },
+    handle, toggleBtn(g),
+    el('span', { class: 'kind', text: depth ? 'Podskupina' : 'Skupina' }),
+    txt(g, 'nazov', 'Názov skupiny', { cls: 'title' }),
+    el('span', { class: 'count', text: total + (total === 1 ? ' odkaz' : total >= 2 && total <= 4 ? ' odkazy' : ' odkazov') }),
+    el('span', { class: 'grow' }),
+    mini('＋ odkaz', 'Pridať odkaz', () => addI.click(), 'txt'),
+    depth === 0 ? mini('＋ podskupina', 'Pridať podskupinu', () => {
+      const ng = { nazov: 'Nová podskupina', polozky: [] };
+      mutate(() => g.polozky.push(ng));
+      focusGroup(ng);
+    }, 'txt') : null,
+    mini('↑', 'Posunúť vyššie', () => step(parent, g, -1)),
+    mini('↓', 'Posunúť nižšie', () => step(parent, g, 1)),
+    mini('⇄', 'Presunúť do inej sekcie/skupiny', () => moveDlg(g, parent)),
+    mini('✕', 'Zmazať skupinu', () => {
+      const really = () => { mutate(() => parent.splice(parent.indexOf(g), 1)); toast(`Skupina „${g.nazov}“ zmazaná.`, 'Vrátiť', undo); };
+      if (!g.polozky.length) really(); else confirmDlg(`Zmazať skupinu „${g.nazov}“?`, `Obsahuje ${total} odkazov.`, really);
+    }, 'del'));
+
+  const box = el('div', { class: 'grp' + (collapsed.has(g) ? ' collapsed' : '') }, head, body);
+  box._g = g;
+  makeDraggable(box, handle, { kind: 'group', obj: g, arr: parent });
+  dropOnGroupHead(head, g, parent);
+  return box;
+}
+const firstGroupIndex = arr => { const i = arr.findIndex(isGroup); return i < 0 ? arr.length : i; };
+
+function rowEl(it, arr) {
+  const ico = iconBox(it);
+  const repaint = debounce(() => paintIcon(ico, it), 350);
+  const row = el('div', { class: 'row' });
+  const mark = () => row.classList.toggle('invalid', itemBad(it));
+  const nazov = txt(it, 'nazov', 'Názov', { onInput: () => { repaint(); nameIn.classList.toggle('bad', !S(it.nazov).trim()); mark(); } });
+  const nameIn = nazov;
+  nameIn.classList.toggle('bad', !S(it.nazov).trim());
+  const url = txt(it, 'url', 'https://…', {
+    onInput: () => { url.classList.toggle('bad', urlBad(it.url)); mark(); },
+    // „192.168.1.1“ alebo „example.com/x“ → doplniť http://
+    fix: v => (v && urlBad(v) && /^[\w-]+(\.[\w-]+)+(:\d+)?(\/.*)?$/.test(v)) ? (toast('Doplnené http:// na začiatok odkazu.'), 'http://' + v) : v
+  });
+  url.classList.toggle('bad', urlBad(it.url));
+  url.title = 'Odkaz, ktorý sa otvorí po kliknutí';
+  const ikona = txt(it, 'ikona', 'proxmox, mdi-…', { list: 'ikony', onInput: repaint });
+  ikona.title = 'Názov z dashboardicons.com, mdi-…, si-…, URL obrázka alebo emoji';
+  const skratka = txt(it, 'skratka', '–', { onInput: repaint });
+  skratka.maxLength = 3; skratka.title = 'Zobrazí sa, keď nie je ikona (max. 3 znaky)';
+  const popis = txt(it, 'popis', 'krátky popis');
+  const kontrola = txt(it, 'kontrola', 'URL alebo IP');
+  kontrola.title = 'Adresa, ktorej dostupnosť domov.html sleduje (prázdne = nesleduje sa)';
+  const fromUrl = mini('↺', 'Doplniť kontrolu z odkazu (adresa servera)', () => {
+    try { const u = new URL(S(it.url).trim()); it.kontrola = u.origin; kontrola.value = it.kontrola; commit(); }
+    catch (e) { toast('Najprv vyplň platný odkaz.'); }
+  });
+  const open = mini('↗', 'Otvoriť odkaz', () => { const u = S(it.url).trim(); if (/^https?:/i.test(u)) window.open(u, '_blank', 'noopener'); else toast('Odkaz nie je http(s) adresa.'); });
+  const handle = el('span', { class: 'handle h', text: '⠿', title: 'Chyť a ťahaj (aj do inej skupiny)' });
+
+  row.append(handle, ico,
+    el('div', { class: 'n' }, nazov), el('div', { class: 'u inl' }, url, open), el('div', { class: 'k' }, ikona),
+    el('div', { class: 's' }, skratka), el('div', { class: 'p' }, popis), el('div', { class: 'c inl' }, kontrola, fromUrl),
+    el('div', { class: 'a acts' },
+      mini('↑', 'Vyššie', () => step(arr, it, -1)),
+      mini('↓', 'Nižšie', () => step(arr, it, 1)),
+      mini('⧉', 'Duplikovať', () => mutate(() => arr.splice(arr.indexOf(it) + 1, 0, clone(it)))),
+      mini('⇄', 'Presunúť do inej skupiny', () => moveDlg(it, arr)),
+      mini('✕', 'Zmazať odkaz', () => { mutate(() => arr.splice(arr.indexOf(it), 1)); toast(`Odkaz „${it.nazov || 'bez názvu'}“ zmazaný.`, 'Vrátiť', undo); }, 'del')));
+  row._it = it;
+  mark();
+  makeDraggable(row, handle, { kind: 'item', obj: it, arr });
+  dropOnRow(row, it, arr);
+  return row;
+}
+
+/* ================= ťahanie myšou ================= */
+let drag = null;
+function makeDraggable(box, handle, info) {
+  handle.addEventListener('mousedown', () => { box.draggable = true; });
+  handle.addEventListener('mouseup', () => { box.draggable = false; });
+  box.addEventListener('dragstart', e => {
+    if (!box.draggable) return;
+    e.stopPropagation();
+    drag = info; box.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', S(info.obj.nazov));
+  });
+  box.addEventListener('dragend', () => { box.draggable = false; box.classList.remove('dragging'); drag = null; clearDrop(); });
+}
+function clearDrop() { document.querySelectorAll('.drop-before,.drop-after,.drop-into').forEach(x => x.classList.remove('drop-before', 'drop-after', 'drop-into')); }
+function moveTo(targetArr, index) {
+  const { obj, arr } = drag;
+  if (drag.kind === 'group' && targetArr !== null && containsArr(obj, targetArr)) return toast('Skupinu nemožno presunúť do nej samej.');
+  mutate(() => {
+    const from = arr.indexOf(obj);
+    arr.splice(from, 1);
+    if (arr === targetArr && from < index) index--;
+    targetArr.splice(Math.max(0, Math.min(index, targetArr.length)), 0, obj);
+  });
+}
+const containsArr = (g, arr) => g.polozky === arr || g.polozky.some(n => isGroup(n) && containsArr(n, arr));
+function dropOnRow(row, it, arr) {
+  row.addEventListener('dragover', e => {
+    if (drag?.kind !== 'item' || drag.obj === it) return;
+    e.preventDefault(); e.stopPropagation(); clearDrop();
+    const r = row.getBoundingClientRect();
+    row.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after');
+  });
+  row.addEventListener('dragleave', () => row.classList.remove('drop-before', 'drop-after'));
+  row.addEventListener('drop', e => {
+    if (drag?.kind !== 'item' || drag.obj === it) return;
+    e.preventDefault(); e.stopPropagation();
+    const after = row.classList.contains('drop-after'); clearDrop();
+    moveTo(arr, arr.indexOf(it) + (after ? 1 : 0));
+  });
+}
+function dropOnGroupHead(head, g, parent) {
+  head.addEventListener('dragover', e => {
+    if (!drag || drag.obj === g) return;
+    if (drag.kind === 'group' && containsArr(drag.obj, parent)) return;
+    e.preventDefault(); e.stopPropagation(); clearDrop();
+    if (drag.kind === 'item') head.classList.add('drop-into');
+    else { const r = head.getBoundingClientRect(); head.parentElement.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after'); }
+  });
+  head.addEventListener('dragleave', () => { head.classList.remove('drop-into'); head.parentElement.classList.remove('drop-before', 'drop-after'); });
+  head.addEventListener('drop', e => {
+    if (!drag || drag.obj === g) return;
+    e.preventDefault(); e.stopPropagation();
+    const after = head.parentElement.classList.contains('drop-after'); clearDrop();
+    if (drag.kind === 'item') { collapsed.delete(g); moveTo(g.polozky, firstGroupIndex(g.polozky)); }
+    else moveTo(parent, parent.indexOf(g) + (after ? 1 : 0));
+  });
+}
+function dropInto(btn, arr, kind) {
+  btn.addEventListener('dragover', e => { if (drag?.kind !== kind) return; e.preventDefault(); e.stopPropagation(); clearDrop(); btn.classList.add('drop-into'); });
+  btn.addEventListener('dragleave', () => btn.classList.remove('drop-into'));
+  btn.addEventListener('drop', e => {
+    if (drag?.kind !== kind) return;
+    e.preventDefault(); e.stopPropagation(); clearDrop();
+    moveTo(arr, kind === 'item' ? firstGroupIndex(arr) : arr.length);
+  });
+}
+
+/* ================= dialógy ================= */
+function dialog(title, body, buttons) {
+  const dlg = $('#dlg');
+  dlg.replaceChildren(el('h3', { text: title }), el('div', { class: 'dbody' }, body),
+    el('div', { class: 'dbtn' }, buttons.map(b => el('button', { type: 'button', class: 'btn ' + (b.cls || ''), text: b.label,
+      onclick: () => { if (b.fn && b.fn() === false) return; dlg.close(); } }))));
+  dlg.showModal();
+  return dlg;
+}
+function confirmDlg(title, text, fn) {
+  dialog(title, el('p', { text }), [{ label: 'Zrušiť' }, { label: 'Zmazať', cls: 'primary', fn }]);
+}
+function moveDlg(obj, arr) {
+  const sel = el('select', { size: '12' });
+  let targets;
+  if (isGroup(obj)) {
+    // skupina: do inej sekcie (ako skupina) alebo do skupiny (ako podskupina)
+    targets = [];
+    data.sekcie.forEach(s => {
+      targets.push({ arr: s.skupiny, label: '▣ ' + (s.nazov || '(bez názvu)') + '  (ako skupina)' });
+      s.skupiny.forEach(g => { if (g !== obj && !containsArr(obj, g.polozky)) targets.push({ arr: g.polozky, label: '      ' + (s.nazov) + ' › ' + (g.nazov || '(bez názvu)') + '  (ako podskupina)' }); });
+    });
+  } else {
+    targets = allGroups().map(x => ({ arr: x.g.polozky, label: '  '.repeat(x.depth) + x.label, item: true }));
+  }
+  targets.forEach((t, i) => sel.append(el('option', { value: String(i), text: t.label })));
+  const cur = targets.findIndex(t => t.arr === arr); sel.value = String(Math.max(0, cur));
+  sel.style.fontFamily = 'inherit';
+  dialog(`Presunúť „${obj.nazov || 'bez názvu'}“`, [el('label', { class: 'f' }, 'Kam:', sel)], [{ label: 'Zrušiť' }, { label: 'Presunúť', cls: 'primary', fn: () => {
+    const t = targets[Number(sel.value)]; if (!t || t.arr === arr) return;
+    drag = { kind: isGroup(obj) ? 'group' : 'item', obj, arr };
+    moveTo(t.arr, isGroup(obj) ? t.arr.length : firstGroupIndex(t.arr));
+    drag = null;
+    toast('Presunuté.', 'Vrátiť', undo);
+  } }]);
+  sel.addEventListener('dblclick', () => $('#dlg .btn.primary').click());
+}
+function pasteDlg() {
+  const ta = el('textarea', { placeholder: 'Sem vlož obsah súboru odkazy.js alebo odkazy.json…', spellcheck: 'false' });
+  dialog('Vložiť odkazy ako text', [ta, el('p', { class: 'help', text: 'Prijme celý odkazy.js (ODKAZY = { … };) aj čistý JSON.' })],
+    [{ label: 'Zrušiť' }, { label: 'Načítať', cls: 'primary', fn: () => {
+      try { setData(parseText(ta.value), { base: true, msg: 'Odkazy načítané z textu.' }); }
+      catch (e) { toast('Nepodarilo sa načítať: ' + e.message); return false; }
+    } }]);
+  setTimeout(() => ta.focus(), 50);
+}
+
+/* ================= hľadanie ================= */
+function applySearch() {
+  const q = fold($('#q').value.trim());
+  const match = s => fold(s).includes(q);
+  const filterGroup = box => {
+    const g = box._g;
+    const own = !!q && match(g.nazov);
+    let any = false;
+    box.querySelectorAll(':scope > .body > .grp').forEach(sub => { if (filterGroup(sub)) any = true; });
+    box.querySelectorAll(':scope > .body > .row').forEach(r => {
+      const it = r._it;
+      const ok = !q || own || ITEM_KEYS.some(k => match(it[k]));
+      r.classList.toggle('hidden-by-search', !ok);
+      if (ok) any = true;
+    });
+    const show = !q || own || any;
+    box.classList.toggle('hidden-by-search', !show);
+    if (q && show) box.classList.remove('collapsed'); else box.classList.toggle('collapsed', collapsed.has(g));
+    return show;
+  };
+  document.querySelectorAll('.sec').forEach(sec => {
+    let any = false;
+    sec.querySelectorAll(':scope > .body > .grp').forEach(g => { if (filterGroup(g)) any = true; });
+    sec.classList.toggle('hidden-by-search', !!q && !any);
+  });
+  document.querySelector('.settings')?.classList.toggle('hidden-by-search', !!q);
+}
+
+/* ================= stav, náhľad ================= */
+function updatePreview() { if ($('#nahlad').open) $('#out').textContent = toJs(); }
+function updateStatus() {
+  let nItems = 0, nMon = 0, bad = 0;
+  walkItems(it => { nItems++; if (S(it.kontrola).trim()) nMon++; if (itemBad(it)) bad++; });
+  $('#stats').textContent = `${data.sekcie.length} sekcie · ${allGroups().length} skupín · ${nItems} odkazov · ${nMon} sledovaných`;
+  const p = $('#problems');
+  p.hidden = !bad; p.className = 'pill bad';
+  p.textContent = `⚠ ${bad} ${bad === 1 ? 'odkaz potrebuje' : 'odkazy potrebujú'} opraviť`;
+  const dirty = JSON.stringify(cleanData()) !== baseSig;
+  const st = $('#state');
+  st.className = 'pill ' + (dirty ? 'dirty' : 'clean');
+  st.textContent = dirty ? '● neexportované zmeny' : '✓ zhodné so súborom';
+  st.title = dirty ? 'Zmeny sú uložené v prehliadači ako koncept. Do odkazy.js sa dostanú až po stiahnutí.' : '';
+  $('#bUndo').disabled = !undoStack.length; $('#bRedo').disabled = !redoStack.length;
+  $('#bFromHome').hidden = !store.get(HOME_KEY, null);
+}
+
+/* ================= import / export ================= */
+function download(name, text, type) {
+  const a = el('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function exportJs() {
+  download('odkazy.js', toJs(), 'text/javascript');
+  baseSig = JSON.stringify(cleanData()); saveDraft(); updateStatus();
+  toast('Stiahnuté. Nahraď ním súbor odkazy.js vedľa domov.html.');
+}
+async function copyJs() {
+  const t = toJs();
+  try { await navigator.clipboard.writeText(t); }
+  catch (e) { const ta = el('textarea'); ta.value = t; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast('Obsah odkazy.js skopírovaný do schránky.');
+}
+async function importFile(f) {
+  try { setData(parseText(await f.text()), { base: true, msg: `Načítané zo súboru ${f.name}.` }); }
+  catch (e) { toast('Import zlyhal: ' + e.message); }
+}
+function reloadFile() {
+  // znova načítať odkazy.js zo servera / disku (obíde cache)
+  const s = document.createElement('script');
+  const prev = window.ODKAZY; window.ODKAZY = undefined;
+  s.src = 'odkazy.js?t=' + Date.now();
+  s.onload = () => {
+    const d = fileData();
+    if (d) setData(d, { base: true, msg: 'Načítané z odkazy.js.' });
+    else { window.ODKAZY = prev; toast('odkazy.js neobsahuje platné odkazy.'); }
+    s.remove();
+  };
+  s.onerror = () => { window.ODKAZY = prev; s.remove(); toast('Súbor odkazy.js sa vedľa tejto stránky nenašiel – použi Import súboru.'); };
+  document.head.append(s);
+}
+
+/* ================= toast, banner ================= */
+let toastTimer;
+function toast(msg, label, fn) {
+  document.querySelector('.toast')?.remove(); clearTimeout(toastTimer);
+  const t = el('div', { class: 'toast' }, el('span', { text: msg }),
+    label ? el('button', { type: 'button', text: label, onclick: () => { t.remove(); fn(); } }) : null);
+  document.body.append(t);
+  toastTimer = setTimeout(() => t.remove(), label ? 7000 : 3500);
+}
+function banner(html, actions, err) {
+  const b = $('#banner'); b.replaceChildren();
+  if (!html) return;
+  b.append(el('div', { class: 'banner' + (err ? ' err' : '') }, el('span', { class: 'msg', html }),
+    (actions || []).map(([l, fn]) => el('button', { type: 'button', class: 'btn', text: l, onclick: () => { b.replaceChildren(); fn(); } })),
+    mini('✕', 'Zavrieť', () => b.replaceChildren())));
+}
+
+/* ================= ovládanie ================= */
+$('#bNew').onclick = () => dialog('Začať od nuly?', el('p', { text: 'Aktuálne odkazy sa nahradia prázdnou šablónou (dá sa vrátiť cez ↶).' }),
+  [{ label: 'Zrušiť' }, { label: 'Začať od nuly', cls: 'primary', fn: () => setData(EMPTY(), { msg: 'Prázdna šablóna.' }) }]);
+$('#bReload').onclick = reloadFile;
+$('#bImport').onclick = () => $('#file').click();
+$('#file').onchange = () => { const f = $('#file').files[0]; if (f) importFile(f); $('#file').value = ''; };
+$('#bPaste').onclick = pasteDlg;
+$('#bFromHome').onclick = () => {
+  const d = store.get(HOME_KEY, null);
+  if (!d || !Array.isArray(d.sekcie)) return toast('V tomto prehliadači nie sú uložené úpravy z domov.html.');
+  setData(d, { msg: 'Načítané úpravy z domov.html.' });
+};
+$('#bToHome').onclick = () => dialog('Zapísať do domov.html?',
+  el('p', { html: 'Odkazy sa uložia do <b>domov.html v tomto prehliadači</b> (prepíšu tam spravené úpravy). Súbor odkazy.js sa tým nezmení – na to slúži <b>⇩ Stiahnuť odkazy.js</b>.' }),
+  [{ label: 'Zrušiť' }, { label: 'Zapísať', cls: 'primary', fn: () => {
+    if (store.set(HOME_KEY, cleanData())) toast('Zapísané. Obnov stránku domov.html.'); else toast('Prehliadač nepovolil zápis.');
+    updateStatus();
+  } }]);
+$('#bUndo').onclick = undo;
+$('#bRedo').onclick = redo;
+$('#bCopy').onclick = copyJs;
+$('#bExport').onclick = exportJs;
+$('#problems').onclick = () => {
+  const r = document.querySelector('.row.invalid');
+  if (!r) return;
+  r.closest('.grp')?.classList.remove('collapsed');
+  r.scrollIntoView({ block: 'center' }); r.querySelector('input.bad')?.focus();
+};
+const setAll = on => {
+  allGroups().forEach(x => on ? collapsed.add(x.g) : collapsed.delete(x.g));
+  if (!on) data.sekcie.forEach(s => collapsed.delete(s));
+  render();
+};
+$('#bCollapse').onclick = () => setAll(true);
+$('#bExpand').onclick = () => setAll(false);
+$('#q').addEventListener('input', debounce(applySearch, 120));
+$('#nahlad').addEventListener('toggle', updatePreview);
+
+document.addEventListener('keydown', e => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === 's') { e.preventDefault(); document.activeElement?.blur?.(); exportJs(); return; }
+  if (typing || $('#dlg').open) return;
+  if ((e.ctrlKey || e.metaKey) && k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if ((e.ctrlKey || e.metaKey) && (k === 'y' || (k === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
+  else if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
+});
+
+// pretiahnutie súboru do okna
+let fileDragDepth = 0;
+const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+window.addEventListener('dragenter', e => { if (hasFiles(e)) { fileDragDepth++; document.body.classList.add('filedrag'); } });
+window.addEventListener('dragleave', e => { if (hasFiles(e) && --fileDragDepth <= 0) { fileDragDepth = 0; document.body.classList.remove('filedrag'); } });
+window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener('drop', e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); fileDragDepth = 0; document.body.classList.remove('filedrag');
+  const f = e.dataTransfer.files[0]; if (f) importFile(f);
+});
+
+/* ================= štart ================= */
+(function start() {
+  const fromFile = fileData();
+  const draft = store.get(DRAFT_KEY, null);
+  const draftOk = draft && draft.data && Array.isArray(draft.data.sekcie);
+  if (draftOk && (!fromFile || sig(draft.data) !== sig(fromFile))) {
+    data = normalize(draft.data); snap = JSON.stringify(data);
+    baseSig = draft.base || (fromFile ? sig(fromFile) : '');
+    render();
+    const cas = new Date(draft.cas || Date.now()).toLocaleString('sk-SK');
+    banner(`Pokračuješ v rozpracovanej verzii z <b>${cas}</b> (uložená v prehliadači)` +
+      (fromFile ? ', ktorá sa líši od súboru odkazy.js.' : '.'),
+      fromFile ? [['Načítať radšej odkazy.js', () => setData(fromFile, { base: true, msg: 'Načítané z odkazy.js.' })]] : []);
+  } else if (fromFile) {
+    data = normalize(fromFile); snap = JSON.stringify(data); baseSig = JSON.stringify(cleanData());
+    render();
+  } else {
+    data = normalize(EMPTY()); snap = JSON.stringify(data); baseSig = '';
+    render();
+    banner('Súbor <b>odkazy.js</b> sa vedľa tejto stránky nenašiel. Začni od nuly, alebo ho naimportuj / pretiahni do okna.',
+      [['⇪ Import súboru', () => $('#file').click()], ['📋 Vložiť text', pasteDlg]]);
+  }
+})();
+})();
+</script>
+</body>
+</html>
