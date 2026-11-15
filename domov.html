@@ -158,6 +158,7 @@ a{color:inherit}
 .frequent .group{margin:0;width:fit-content;max-width:100%}
 .frequent .gbody{display:flex;flex-wrap:wrap}
 .frequent .tile{width:210px}
+.fav-star{color:#f5b301}
 
 /* ---------- režim úprav ---------- */
 .ctl{display:none;gap:4px}
@@ -300,7 +301,7 @@ function hostOf(url) { try { return new URL(url).host; } catch (e) { return ''; 
 
 /* ================= stav ================= */
 const VERZIA = '1.0';
-const DEFAULTS = { nazov: 'Domov', novaKarta: true, tema: 'auto', kontrolaSekundy: 60 };
+const DEFAULTS = { nazov: 'Domov', novaKarta: true, tema: 'auto', kontrolaSekundy: 60, zobrazOblubene: true, zobrazCasto: true };
 let data = null, example = false, editMode = false;
 let filter = store.get('domov-filter', '*');
 const usage = store.get('domov-pouzitie', {});
@@ -579,16 +580,24 @@ function groupEl(g, arr, path, depth) {
   return el('section', { class: 'group' + (depth ? ' sub' : ''), 'data-gname': norm(p[1] || g.nazov) }, head, body, subs);
 }
 
+// rýchle sekcie navrchu (Obľúbené, Často používané) – rovnaký vzhľad
+function quickEl(id, title, list) {
+  if (!list.length) return null;
+  const body = el('div', { class: 'gbody' }, list.map(x => tileEl(x.it, null, x.path, { noRef: true })));
+  return el('div', { class: 'section frequent', id },
+    el('div', { class: 'shead' }, el('h2', { text: title }), el('span', { class: 'line' })),
+    el('div', { class: 'group' }, body));
+}
 function frequentEl() {
   const items = allItems().filter(x => safeHref(x.it.url) && (usage[safeHref(x.it.url)] || 0) >= 2);
   const seen = new Set();
   const top = items.sort((a, b) => usage[safeHref(b.it.url)] - usage[safeHref(a.it.url)])
     .filter(x => !seen.has(x.it.url) && seen.add(x.it.url)).slice(0, 6);
-  if (!top.length) return null;
-  const body = el('div', { class: 'gbody' }, top.map(x => tileEl(x.it, null, x.path, { noRef: true })));
-  return el('div', { class: 'section frequent', id: 'frequent' },
-    el('div', { class: 'shead' }, el('h2', { text: 'Často používané' }), el('span', { class: 'line' })),
-    el('div', { class: 'group' }, body));
+  return quickEl('frequent', 'Často používané', top);
+}
+// obľúbené = odkazy s „oblubene: true“ (zaškrtnutie ★ v úprave odkazu), v poradí ako v zozname
+function favoritesEl() {
+  return quickEl('oblubene', '★ Obľúbené', allItems().filter(x => x.it.oblubene && safeHref(x.it.url)));
 }
 
 function render() {
@@ -611,7 +620,10 @@ function render() {
         onclick: () => { filter = k; store.set('domov-filter', k); render(); } })));
 
   app.replaceChildren();
-  if (!editMode) { const f = frequentEl(); if (f && filter === '*') app.append(f); }
+  if (!editMode && filter === '*') {
+    if (st.zobrazOblubene !== false) { const f = favoritesEl(); if (f) app.append(f); }
+    if (st.zobrazCasto !== false) { const f = frequentEl(); if (f) app.append(f); }
+  }
   data.sekcie.forEach(sec => {
     sec.skupiny = sec.skupiny || [];
     const grid = el('div', { class: 'groups' });
@@ -669,7 +681,7 @@ function applyFilter() {
     const g = s.querySelectorAll('.groups > .group');
     s.hidden = g.length > 0 && [...g].every(x => x.hidden) && !editMode;
   });
-  const fr = $('#frequent'); if (fr) fr.hidden = !!q;
+  document.querySelectorAll('#app .section.frequent').forEach(fr => { fr.hidden = !!q; });
   fitColumns();
   const none = $('#none');
   none.hidden = !q || shown > 0;
@@ -717,6 +729,7 @@ function editItem(it, arr) {
   const curIdx = groups.findIndex(g => g.g.polozky === arr);
   sel.value = String(Math.max(0, curIdx));
   const err = el('p', { class: 'err-msg', hidden: true });
+  const fav = el('input', { type: 'checkbox' }); fav.checked = !!v.oblubene;
 
   const body = [
     ...field('Názov', f.nazov),
@@ -732,11 +745,13 @@ function editItem(it, arr) {
     el('label', { class: 'f' }, 'Kontrola dostupnosti', el('div', { class: 'inline' }, f.kontrola, fromUrl)),
     el('p', { class: 'hint', text: 'Prehliadač skúsi adresu otvoriť (pri IP/názve cez http://). Prázdne = bez kontroly. Služby s vlastným HTTPS certifikátom môžu vyzerať nedostupné.' }),
     ...field('Skupina', sel),
+    el('label', { class: 'chk' }, fav, el('span', {}, el('span', { class: 'fav-star', text: '★ ' }), 'Obľúbený (zobrazí sa v sekcii Obľúbené)')),
     err
   ];
   const doSave = () => {
     const out = {};
     for (const k of ['nazov', 'url', 'ikona', 'skratka', 'popis', 'kontrola']) { const x = f[k].value.trim(); if (x) out[k] = x; }
+    if (fav.checked) out.oblubene = true;
     if (!out.nazov) { err.textContent = 'Vyplň názov.'; err.hidden = false; f.nazov.focus(); return false; }
     const target = groups[Number(sel.value)]?.g.polozky || arr;
     if (!target) { err.textContent = 'Najprv vytvor skupinu.'; err.hidden = false; return false; }
@@ -830,6 +845,8 @@ function openSettings() {
   tema.value = st.tema;
   const interval = el('input', { type: 'number', min: '0', max: '3600' }); interval.value = st.kontrolaSekundy;
   const nova = el('input', { type: 'checkbox' }); nova.checked = !!st.novaKarta;
+  const zobObl = el('input', { type: 'checkbox' }); zobObl.checked = st.zobrazOblubene !== false;
+  const zobCas = el('input', { type: 'checkbox' }); zobCas.checked = st.zobrazCasto !== false;
   const file = el('input', { type: 'file', accept: '.json,.js,application/json,text/javascript', hidden: true });
   file.addEventListener('change', async () => {
     const fl = file.files[0]; if (!fl) return;
@@ -913,6 +930,8 @@ function openSettings() {
     ...field('Názov stránky', nazov),
     el('div', { class: 'row2' }, el('label', { class: 'f' }, 'Téma', tema), el('label', { class: 'f' }, 'Kontrola dostupnosti (sekundy, 0 = vypnutá)', interval)),
     el('label', { class: 'chk' }, nova, 'Otvárať odkazy v novej karte'),
+    el('label', { class: 'chk' }, zobObl, 'Zobrazovať sekciu ★ Obľúbené (odkaz označíš v úprave odkazu)'),
+    el('label', { class: 'chk' }, zobCas, 'Zobrazovať sekciu Často používané'),
     el('div', { class: 'btnrow' },
       el('button', { type: 'button', class: 'btn', text: '⇩ Stiahnuť odkazy.js', onclick: exportJs }),
       el('button', { type: 'button', class: 'btn', text: '⇩ Export JSON', onclick: exportJson }),
@@ -928,7 +947,8 @@ function openSettings() {
     store.set(HOD_KEY, hod);
     mutate(() => Object.assign(data.nastavenia, {
       nazov: nazov.value.trim() || 'Domov', tema: tema.value,
-      kontrolaSekundy: Math.max(0, Number(interval.value) || 0), novaKarta: nova.checked }));
+      kontrolaSekundy: Math.max(0, Number(interval.value) || 0), novaKarta: nova.checked,
+      zobrazOblubene: zobObl.checked, zobrazCasto: zobCas.checked }));
     restartMonitor();
   } }]);
   // zrušenie (aj Esc) vráti rozloženie späť
