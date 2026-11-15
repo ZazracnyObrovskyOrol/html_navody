@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Git a GitHub – príkazy</title>
-<meta name="description" content="Prehľadný ťahák: pull, úpravy, commit, push, vetvy, pull requesty a oprava chýb.">
+<meta name="description" content="Prehľadný ťahák: pull, úpravy, commit, push, vetvy, pull requesty, tagy a releases, oprava chýb.">
 <link rel="stylesheet" href="style.css">
 <style>
   main { max-width: 1500px; padding: 24px 20px 64px; }
@@ -92,7 +92,7 @@
 <main>
   <nav class="back"><a href="index.html">← Späť na návody</a></nav>
   <h1>Git a GitHub – príkazy</h1>
-  <p class="lead">Prehľadný ťahák: stiahnuť zmeny, upraviť, commitnúť a pushnúť. K tomu vetvy, pull requesty a oprava bežných chýb.</p>
+  <p class="lead">Prehľadný ťahák: stiahnuť zmeny, upraviť, commitnúť a pushnúť. K tomu vetvy, pull requesty, tagy a releases a oprava bežných chýb.</p>
 
   <ul class="toc">
     <li><a href="#zaklad">Základný scenár</a></li>
@@ -100,6 +100,7 @@
     <li><a href="#overit">Overiť pred pullom</a></li>
     <li><a href="#vetvy">Vetvy</a></li>
     <li><a href="#pr">Pull request</a></li>
+    <li><a href="#tagy">Tagy a releases</a></li>
     <li><a href="#konflikt">Konflikty</a></li>
     <li><a href="#oprava">Oprava chýb</a></li>
     <li><a href="#nastavenie">Prvé nastavenie</a></li>
@@ -238,6 +239,47 @@ gh pr merge 12 --squash --delete-branch    <span class="c"># zlúči a zmaže ve
 git switch main && git pull                <span class="c"># stiahni zlúčený výsledok</span></code></pre>
   </section>
   <section class="box t5">
+  <h2 id="tagy">Tagy a releases</h2>
+  <p>Tag = trvalá menovka na konkrétnom commite, typicky číslo verzie (<code>v1.0</code>, <code>v1.2.3</code>). Release na GitHube je tag s popisom zmien a prípadne priloženými súbormi.</p>
+
+  <h3>Vytvoriť tag</h3>
+<pre><code>git tag -a v1.0 -m "Verzia 1.0"      <span class="c"># anotovaný tag na aktuálnom commite (odporúčané)</span>
+git tag -a v0.9 abc1234 -m "Verzia 0.9" <span class="c"># tag na starší commit</span>
+git tag v1.0-test                    <span class="c"># jednoduchý (ľahký) tag bez popisu</span></code></pre>
+
+  <h3>Poslať tagy na GitHub</h3>
+  <p><code>git push</code> tagy sám neposiela, treba ich pushnúť zvlášť:</p>
+<pre><code>git push origin v1.0                 <span class="c"># jeden tag</span>
+git push --tags                      <span class="c"># všetky lokálne tagy</span></code></pre>
+
+  <h3>Prehľad a prepnutie na verziu</h3>
+<pre><code>git tag                              <span class="c"># zoznam tagov</span>
+git tag -l "v1.*"                    <span class="c"># len tagy podľa vzoru</span>
+git show v1.0                        <span class="c"># detail tagu a commitu</span>
+git describe --tags                  <span class="c"># najbližší tag k aktuálnemu commitu</span>
+git switch --detach v1.0             <span class="c"># pozrieť si stav verzie (len na čítanie)</span>
+git switch main                      <span class="c"># späť na main</span></code></pre>
+
+  <h3>Release na GitHube</h3>
+<pre><code>gh release create v1.0 --generate-notes   <span class="c"># release z tagu, popis z commitov a PR</span>
+gh release create v1.0 -t "Verzia 1.0" -n "Čo je nové …"
+gh release create v1.0 subor.zip          <span class="c"># s priloženým súborom</span>
+gh release list                           <span class="c"># zoznam releasov</span>
+gh release view v1.0 --web                <span class="c"># otvoriť v prehliadači</span></code></pre>
+  <p>Ak tag ešte neexistuje, <code>gh release create</code> ho vytvorí na aktuálnom <code>main</code> na GitHube.</p>
+
+  <h3>Zmazať alebo opraviť tag</h3>
+<pre><code>git tag -d v1.0                      <span class="c"># zmazať lokálne</span>
+git push origin --delete v1.0        <span class="c"># zmazať na GitHube</span>
+gh release delete v1.0               <span class="c"># zmazať release (tag ostane)</span></code></pre>
+  <div class="note warn">
+    Tag, ktorý už je na GitHube, radšej neprepisuj – ostatní ho môžu mať stiahnutý so starým obsahom. Namiesto opravy vydaj novú verziu (<code>v1.0.1</code>).
+  </div>
+  <div class="note">
+    <strong>Číslovanie verzií</strong> (semver) <code>vHLAVNÁ.VEDĽAJŠIA.OPRAVA</code>: oprava chyby → <code>v1.0.1</code>, nová funkcia → <code>v1.1.0</code>, nekompatibilná zmena → <code>v2.0.0</code>.
+  </div>
+  </section>
+  <section class="box t0">
   <h2 id="konflikt">Riešenie konfliktov</h2>
   <p>Konflikt vznikne, keď ty aj niekto iný zmeníte ten istý riadok. Git to oznámi pri <code>pull</code> alebo <code>merge</code>.</p>
 <pre><code>git status                 <span class="c"># "both modified" = súbory s konfliktom</span></code></pre>
@@ -252,7 +294,7 @@ git commit                 <span class="c"># dokončí merge (pri rebase: git re
 git push</code></pre>
   <p>Ak sa chceš vrátiť pred pokus o zlúčenie: <code>git merge --abort</code> (alebo <code>git rebase --abort</code>).</p>
   </section>
-  <section class="box t0">
+  <section class="box t1">
   <h2 id="oprava">Oprava chýb</h2>
   <table>
     <tr><th>Situácia</th><th>Príkaz</th></tr>
@@ -270,7 +312,7 @@ git push</code></pre>
     <code>git reset --hard</code> nenávratne zmaže necommitnuté zmeny.
   </div>
   </section>
-  <section class="box t1">
+  <section class="box t2">
   <h2 id="nastavenie">Prvé nastavenie</h2>
 <pre><code>git config --global user.name "Meno"
 git config --global user.email "meno@example.com"
@@ -294,7 +336,7 @@ gh repo create projekt --private --source=. --push</code></pre>
 git push -u origin main
 git remote -v              <span class="c"># kontrola, kam sa pushuje</span></code></pre>
   </section>
-  <section class="box t2">
+  <section class="box t3">
   <h2 id="tahak">Ťahák</h2>
   <table>
     <tr><th>Príkaz</th><th>Čo robí</th></tr>
@@ -313,6 +355,9 @@ git remote -v              <span class="c"># kontrola, kam sa pushuje</span></co
     <tr><td><code>gh pr create</code></td><td>vytvoriť pull request</td></tr>
     <tr><td><code>gh pr checkout 12</code></td><td>stiahnuť PR na vyskúšanie</td></tr>
     <tr><td><code>gh pr merge 12</code></td><td>zlúčiť PR</td></tr>
+    <tr><td><code>git tag -a v1.0 -m "…"</code></td><td>označiť verziu tagom</td></tr>
+    <tr><td><code>git push --tags</code></td><td>poslať tagy na GitHub</td></tr>
+    <tr><td><code>gh release create v1.0</code></td><td>vytvoriť release na GitHube</td></tr>
   </table>
   </section>
   </div>
