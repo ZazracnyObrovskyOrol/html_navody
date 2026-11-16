@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSH – kľúče, server a pripojenie</title>
+<meta name="description" content="SSH kľúče: kto ich generuje, kde ostáva privátny, kam ide verejný. Linux a Windows, kopírovanie kľúčov, povolenie používateľov na serveri, scp, config a riešenie chýb.">
+<link rel="stylesheet" href="style.css">
+<style>
+  main { max-width: 1500px; padding: 24px 20px 64px; }
+
+  :root {
+    --t0: #eef4ff; --s0: #3b82f6;
+    --t1: #eefaf2; --s1: #16a34a;
+    --t2: #fff7ea; --s2: #d97706;
+    --t3: #f5f0ff; --s3: #7c3aed;
+    --t4: #ebf9fa; --s4: #0d9488;
+    --t5: #fff0f3; --s5: #e11d48;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --t0: #1a2233; --s0: #5b8def;
+      --t1: #182a20; --s1: #3fbf6f;
+      --t2: #2c2416; --s2: #e0a040;
+      --t3: #241e33; --s3: #a083f0;
+      --t4: #162a2b; --s4: #33b5a8;
+      --t5: #2e1a20; --s5: #ef6080;
+    }
+  }
+  .box {
+    background: var(--tint); border: 1px solid var(--border);
+    border-top: 4px solid var(--stripe); border-radius: 12px;
+    padding: 4px 20px 14px; margin: 0 0 20px;
+  }
+  .box h2 { margin: 12px 0 8px; padding-top: 0; border-top: 0; color: var(--stripe); }
+  .t0 { --tint: var(--t0); --stripe: var(--s0); }
+  .t1 { --tint: var(--t1); --stripe: var(--s1); }
+  .t2 { --tint: var(--t2); --stripe: var(--s2); }
+  .t3 { --tint: var(--t3); --stripe: var(--s3); }
+  .t4 { --tint: var(--t4); --stripe: var(--s4); }
+  .t5 { --tint: var(--t5); --stripe: var(--s5); }
+  .box pre { background: var(--card); }
+  .box .note { background: var(--card); }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 16px 0 8px; padding: 0; list-style: none; }
+  .toc li { margin: 0; }
+  .toc a {
+    display: inline-block; padding: 4px 10px; border: 1px solid var(--border);
+    border-radius: 999px; background: var(--card); text-decoration: none; font-size: 0.9rem;
+  }
+  .toc a:hover { border-color: var(--accent); }
+
+  /* Linux / Windows vedľa seba, na mobile pod sebou. */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .cols > div { min-width: 0; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  .os {
+    display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 0.8rem;
+    font-weight: 600; background: var(--card); border: 1px solid var(--border); margin-right: 6px;
+  }
+
+  /* Schéma: kde je ktorý kľúč. */
+  .schema { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin: 14px 0; }
+  .schema .pc {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px;
+  }
+  .schema .pc strong { display: block; margin-bottom: 4px; }
+  .schema .pc div { font-size: 0.92rem; }
+  .schema .arrow { text-align: center; color: var(--muted); font-size: 0.9rem; }
+  .schema .arrow b { display: block; font-size: 1.6rem; color: var(--stripe); line-height: 1; }
+  @media (max-width: 700px) {
+    .schema { grid-template-columns: 1fr; }
+    .schema .arrow b { transform: rotate(90deg); }
+  }
+  .key { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; }
+
+  .step {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 4px 16px 6px; margin: 12px 0;
+  }
+  .step h3 { margin-top: 12px; display: flex; gap: 10px; align-items: baseline; }
+  .step h3 .n {
+    flex: none; width: 1.6em; height: 1.6em; line-height: 1.6em; text-align: center;
+    border-radius: 50%; background: var(--accent); color: var(--bg); font-size: 0.85rem;
+  }
+  .step p { margin: 6px 0; }
+
+  pre { position: relative; }
+  pre .c { color: var(--muted); }
+  .copy {
+    position: absolute; top: 6px; right: 6px; font: 12px system-ui, sans-serif;
+    padding: 2px 8px; border-radius: 5px; border: 1px solid var(--border);
+    background: var(--card); color: var(--muted); cursor: pointer; opacity: 0.75;
+  }
+  .copy:hover { opacity: 1; color: var(--text); }
+
+  .tw { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+  td:first-child { white-space: nowrap; }
+  @media (max-width: 600px) { td:first-child { white-space: normal; } }
+  .warn { border-left-color: #d9534f; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="back"><a href="index.html">← Späť na návody</a></nav>
+  <h1>SSH – kľúče, server a pripojenie</h1>
+  <p class="lead">Kto generuje kľúče, kde ostáva privátny a kam ide verejný. Rozdiely medzi Linuxom a Windowsom, kopírovanie kľúčov, povolenie používateľov na serveri, prenos súborov a riešenie chýb.</p>
+
+  <ul class="toc">
+    <li><a href="#princip">Ako to funguje</a></li>
+    <li><a href="#generovanie">Generovanie kľúča</a></li>
+    <li><a href="#subory">Kde sú súbory</a></li>
+    <li><a href="#kopirovanie">Kopírovanie na server</a></li>
+    <li><a href="#prava">Práva súborov</a></li>
+    <li><a href="#agent">ssh-agent</a></li>
+    <li><a href="#config">Súbor config</a></li>
+    <li><a href="#server">SSH server v Linuxe</a></li>
+    <li><a href="#pouzivatelia">Povolenie používateľov</a></li>
+    <li><a href="#winserver">SSH server vo Windows</a></li>
+    <li><a href="#prenos">Prenos súborov</a></li>
+    <li><a href="#tunely">Tunely a skok cez server</a></li>
+    <li><a href="#chyby">Riešenie chýb</a></li>
+    <li><a href="#tahak">Ťahák</a></li>
+  </ul>
+
+  <!-- ===== Princíp ===== -->
+  <section class="box t0">
+  <h2 id="princip">Ako to funguje</h2>
+  <p>SSH kľúč je <strong>pár dvoch súborov</strong>: privátny a verejný. Čo zamkne jeden, odomkne len druhý. Server si overí, že máš privátny kľúč, bez toho, aby ho niekedy videl.</p>
+
+  <div class="schema">
+    <div class="pc">
+      <strong>💻 Tvoj počítač (klient)</strong>
+      <div>Tu sa kľúč <strong>generuje</strong> príkazom <code>ssh-keygen</code>.</div>
+      <div>🔒 <span class="key">id_ed25519</span> – privátny, <strong>nikdy neopúšťa</strong> počítač</div>
+      <div>🔓 <span class="key">id_ed25519.pub</span> – verejný, ten sa rozdáva</div>
+    </div>
+    <div class="arrow"><b>→</b>kopíruje sa len<br><span class="key">.pub</span></div>
+    <div class="pc">
+      <strong>🖥️ Server / GitHub</strong>
+      <div>Verejný kľúč sa pridá na koniec súboru<br><span class="key">~/.ssh/authorized_keys</span> používateľa, za ktorého sa prihlasuješ.</div>
+      <div>Na GitHube: <em>Settings → SSH and GPG keys</em>.</div>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong>Kto generuje:</strong> vždy ten, kto sa bude <strong>pripájať</strong> (klient), na svojom počítači. Server kľúč negeneruje a nikdy ho nemá posielať e-mailom ani inak.</li>
+    <li><strong>Privátny kľúč</strong> ostáva u teba v <code>~/.ssh/</code>. Kto ho získa, prihlási sa za teba. Chráň ho heslom (passphrase).</li>
+    <li><strong>Verejný kľúč</strong> môžeš pokojne ukázať komukoľvek. Na jeden server môžeš pridať kľúče z viacerých počítačov (každý na samostatný riadok).</li>
+    <li><strong>Jeden kľúč na počítač</strong> je bežný postup. Keď počítač stratíš, zmažeš na serveroch len jeho riadok.</li>
+  </ul>
+
+  <div class="note">
+    <strong>Server má vlastné kľúče</strong> (<code>/etc/ssh/ssh_host_*</code>), ktorými sa preukazuje on tebe. Pri prvom pripojení sa zobrazí otázka <em>„Are you sure you want to continue connecting?“</em> – po potvrdení si klient odtlačok servera uloží do <code>~/.ssh/known_hosts</code> a nabudúce kontroluje, či sa niekto nevydáva za server.
+  </div>
+  </section>
+
+  <!-- ===== Generovanie ===== -->
+  <section class="box t1">
+  <h2 id="generovanie">Generovanie kľúča</h2>
+  <p>Príkaz je v Linuxe aj vo Windows rovnaký – Windows 10 a 11 majú OpenSSH klienta zabudovaného (spúšťa sa v PowerShelli alebo cmd).</p>
+
+  <div class="cols">
+  <div>
+    <h3><span class="os">Linux</span>terminál</h3>
+<pre><code>ssh-keygen -t ed25519 -C "meno@pocitac"</code></pre>
+  </div>
+  <div>
+    <h3><span class="os">Windows</span>PowerShell</h3>
+<pre><code>ssh-keygen -t ed25519 -C "meno@pocitac"</code></pre>
+  </div>
+  </div>
+
+  <p>Program sa spýta:</p>
+  <ol>
+    <li><strong>Kam uložiť</strong> – Enter = predvolené <code>~/.ssh/id_ed25519</code>. Ak už kľúč existuje, nič neprepisuj (odpovedz <code>n</code>) a zadaj iný názov.</li>
+    <li><strong>Passphrase</strong> – heslo k privátnemu kľúču. Odporúčané; aby si ho nezadával stále, použi <a href="#agent">ssh-agent</a>.</li>
+  </ol>
+
+<pre><code>ssh-keygen -t ed25519 -f ~/.ssh/id_server -C "pre domáci server"  <span class="c"># vlastný názov súboru</span>
+ssh-keygen -t rsa -b 4096 -C "meno@pocitac"     <span class="c"># RSA – len pre staré servery bez ed25519</span>
+ssh-keygen -p -f ~/.ssh/id_ed25519             <span class="c"># zmeniť / pridať passphrase</span>
+ssh-keygen -lf ~/.ssh/id_ed25519.pub           <span class="c"># odtlačok (fingerprint) kľúča</span></code></pre>
+
+  <h3>Zobraziť a skopírovať verejný kľúč</h3>
+  <div class="cols">
+  <div>
+    <h3><span class="os">Linux</span></h3>
+<pre><code>cat ~/.ssh/id_ed25519.pub
+xclip -sel clip &lt; ~/.ssh/id_ed25519.pub   <span class="c"># rovno do schránky</span></code></pre>
+  </div>
+  <div>
+    <h3><span class="os">Windows</span></h3>
+<pre><code>Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub
+Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub | Set-Clipboard</code></pre>
+  </div>
+  </div>
+  <p>Verejný kľúč je jeden riadok v tvare <code>ssh-ed25519 AAAAC3Nz… meno@pocitac</code>.</p>
+  <div class="note warn">
+    Nikdy neposielaj ani nekopíruj súbor <strong>bez</strong> <code>.pub</code>. Ak sa privátny kľúč dostal von, vygeneruj nový a starý zmaž zo všetkých serverov.
+  </div>
+  </section>
+
+  <!-- ===== Súbory ===== -->
+  <section class="box t2">
+  <h2 id="subory">Kde sú súbory – Linux vs. Windows</h2>
+  <div class="tw">
+  <table>
+    <tr><th>Súbor</th><th>Linux</th><th>Windows</th><th>Na čo je</th></tr>
+    <tr><td>adresár</td><td><code>~/.ssh/</code></td><td><code>C:\Users\meno\.ssh\</code></td><td>všetko pre klienta</td></tr>
+    <tr><td>privátny kľúč</td><td><code>~/.ssh/id_ed25519</code></td><td><code>%USERPROFILE%\.ssh\id_ed25519</code></td><td>ostáva u teba</td></tr>
+    <tr><td>verejný kľúč</td><td><code>~/.ssh/id_ed25519.pub</code></td><td><code>%USERPROFILE%\.ssh\id_ed25519.pub</code></td><td>kopíruje sa na server</td></tr>
+    <tr><td>známe servery</td><td><code>~/.ssh/known_hosts</code></td><td><code>%USERPROFILE%\.ssh\known_hosts</code></td><td>odtlačky serverov</td></tr>
+    <tr><td>nastavenia klienta</td><td><code>~/.ssh/config</code></td><td><code>%USERPROFILE%\.ssh\config</code></td><td>skratky pre servery</td></tr>
+    <tr><td>povolené kľúče (server)</td><td><code>~/.ssh/authorized_keys</code></td><td><code>%USERPROFILE%\.ssh\authorized_keys</code>, pre adminov <code>C:\ProgramData\ssh\administrators_authorized_keys</code></td><td>kto sa smie prihlásiť</td></tr>
+    <tr><td>nastavenie servera</td><td><code>/etc/ssh/sshd_config</code></td><td><code>C:\ProgramData\ssh\sshd_config</code></td><td>konfigurácia SSH servera</td></tr>
+    <tr><td>kľúče servera</td><td><code>/etc/ssh/ssh_host_*</code></td><td><code>C:\ProgramData\ssh\ssh_host_*</code></td><td>identita servera</td></tr>
+  </table>
+  </div>
+  <p>Ďalšie rozdiely:</p>
+  <ul>
+    <li>Windows nemá príkaz <code>ssh-copy-id</code> – verejný kľúč sa kopíruje inak (viď nižšie).</li>
+    <li>Práva súborov: v Linuxe <code>chmod</code>, vo Windows ACL (<code>icacls</code>). Pri zlých právach SSH kľúč odmietne.</li>
+    <li>ssh-agent: v Linuxe sa spúšťa v relácii, vo Windows je to služba, ktorú treba raz zapnúť.</li>
+    <li>PuTTY používa vlastný formát <code>.ppk</code> – prevod cez PuTTYgen (<em>Conversions → Import key</em>). Pri zabudovanom OpenSSH to netreba.</li>
+  </ul>
+  </section>
+
+  <!-- ===== Kopírovanie ===== -->
+  <section class="box t3">
+  <h2 id="kopirovanie">Kopírovanie verejného kľúča na server</h2>
+  <p>Cieľ: pridať obsah <code>id_ed25519.pub</code> na koniec <code>~/.ssh/authorized_keys</code> na serveri. Prvýkrát sa ešte prihlasuješ heslom.</p>
+
+  <div class="step">
+    <h3><span class="n">1</span><span><span class="os">Linux</span>ssh-copy-id</span></h3>
+<pre><code>ssh-copy-id meno@server                        <span class="c"># skopíruje id_ed25519.pub</span>
+ssh-copy-id -i ~/.ssh/id_server.pub meno@server <span class="c"># konkrétny kľúč</span>
+ssh-copy-id -p 2222 meno@server                <span class="c"># iný port</span></code></pre>
+    <p>Sám vytvorí <code>~/.ssh</code> na serveri a nastaví správne práva.</p>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">2</span><span><span class="os">Windows</span>PowerShell (na Linux server)</span></h3>
+<pre><code>type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh meno@server "mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh &amp;&amp; cat &gt;&gt; ~/.ssh/authorized_keys &amp;&amp; chmod 600 ~/.ssh/authorized_keys"</code></pre>
+    <p>Robí to isté ako <code>ssh-copy-id</code>. Na Windows server postup viď <a href="#winserver">SSH server vo Windows</a>.</p>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">3</span>Ručne (keď nič iné nejde)</h3>
+    <p>Skopíruj riadok z <code>.pub</code> do schránky, prihlás sa na server a vlož ho:</p>
+<pre><code>mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh
+nano ~/.ssh/authorized_keys       <span class="c"># vlož riadok na koniec, ulož</span>
+chmod 600 ~/.ssh/authorized_keys</code></pre>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">4</span>Overiť</h3>
+<pre><code>ssh meno@server                   <span class="c"># už sa nepýta heslo účtu (len passphrase kľúča)</span></code></pre>
+  </div>
+
+  <h3>GitHub</h3>
+<pre><code>gh ssh-key add ~/.ssh/id_ed25519.pub -t "Notebook"  <span class="c"># cez gh, alebo na webe: Settings → SSH and GPG keys → New SSH key</span>
+ssh -T git@github.com                               <span class="c"># test: "Hi meno! You've successfully authenticated"</span>
+git remote set-url origin git@github.com:vlastnik/projekt.git  <span class="c"># prepnúť repozitár z https na ssh</span></code></pre>
+
+  <h3>Odobrať prístup kľúču</h3>
+  <p>Na serveri zmaž príslušný riadok z <code>~/.ssh/authorized_keys</code> (podľa komentára na konci riadku). Na GitHube kľúč zmaž v nastaveniach.</p>
+  </section>
+
+  <!-- ===== Práva ===== -->
+  <section class="box t4">
+  <h2 id="prava">Práva súborov</h2>
+  <p>SSH je prísne – ak má privátny kľúč alebo <code>authorized_keys</code> príliš voľné práva, kľúč sa ignoruje.</p>
+  <div class="cols">
+  <div>
+    <h3><span class="os">Linux</span>klient aj server</h3>
+<pre><code>chmod 700 ~/.ssh
+chmod 600 ~/.ssh/id_ed25519          <span class="c"># privátny kľúč</span>
+chmod 644 ~/.ssh/id_ed25519.pub
+chmod 600 ~/.ssh/authorized_keys ~/.ssh/config
+chown -R $USER:$USER ~/.ssh
+chmod go-w ~                         <span class="c"># domovský adresár nesmie byť zapisovateľný pre iných</span></code></pre>
+  </div>
+  <div>
+    <h3><span class="os">Windows</span>privátny kľúč len pre teba</h3>
+<pre><code>icacls $env:USERPROFILE\.ssh\id_ed25519 /inheritance:r
+icacls $env:USERPROFILE\.ssh\id_ed25519 /grant:r "$($env:USERNAME):F"</code></pre>
+    <p>Treba to napr. pri kľúči skopírovanom z iného disku, keď <code>ssh</code> hlási <em>„UNPROTECTED PRIVATE KEY FILE“</em>.</p>
+  </div>
+  </div>
+  </section>
+
+  <!-- ===== Agent ===== -->
+  <section class="box t5">
+  <h2 id="agent">ssh-agent – passphrase len raz</h2>
+  <p>Agent si pamätá odomknutý kľúč, takže passphrase zadáš raz za reláciu (alebo raz po prihlásení).</p>
+  <div class="cols">
+  <div>
+    <h3><span class="os">Linux</span></h3>
+<pre><code>eval "$(ssh-agent -s)"     <span class="c"># spustiť agenta (desktopy ho väčšinou spúšťajú samy)</span>
+ssh-add                    <span class="c"># pridá id_ed25519, spýta sa na passphrase</span>
+ssh-add ~/.ssh/id_server   <span class="c"># iný kľúč</span>
+ssh-add -l                 <span class="c"># kľúče v agentovi</span>
+ssh-add -D                 <span class="c"># vyprázdniť agenta</span></code></pre>
+  </div>
+  <div>
+    <h3><span class="os">Windows</span>PowerShell ako správca, raz</h3>
+<pre><code>Get-Service ssh-agent | Set-Service -StartupType Automatic
+Start-Service ssh-agent</code></pre>
+    <p>Potom ako bežný používateľ:</p>
+<pre><code>ssh-add $env:USERPROFILE\.ssh\id_ed25519
+ssh-add -l</code></pre>
+    <p>Windows si kľúč pamätá aj po reštarte.</p>
+  </div>
+  </div>
+  <p>Automatické pridanie kľúča pri prvom použití – do <code>~/.ssh/config</code>:</p>
+<pre><code>Host *
+    AddKeysToAgent yes</code></pre>
+  </section>
+
+  <!-- ===== Config ===== -->
+  <section class="box t0">
+  <h2 id="config">Súbor ~/.ssh/config – skratky</h2>
+  <p>Namiesto <code>ssh -p 2222 -i ~/.ssh/id_server admin@192.168.1.50</code> stačí <code>ssh domaci</code>. Funguje rovnako v Linuxe aj vo Windows.</p>
+<pre><code>Host domaci
+    HostName 192.168.1.50
+    User admin
+    Port 2222
+    IdentityFile ~/.ssh/id_server
+    IdentitiesOnly yes          <span class="c"># skúšať len tento kľúč</span>
+
+Host github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+
+Host *
+    AddKeysToAgent yes
+    ServerAliveInterval 60      <span class="c"># udržať spojenie, aby nespadlo pri nečinnosti</span></code></pre>
+  <p>Skratka funguje aj pre <code>scp</code>, <code>rsync</code>, <code>git</code> a VS Code Remote-SSH.</p>
+  </section>
+
+  <!-- ===== Server Linux ===== -->
+  <section class="box t1">
+  <h2 id="server">SSH server v Linuxe</h2>
+  <h3>Inštalácia a spustenie</h3>
+<pre><code>sudo apt install openssh-server       <span class="c"># Debian, Ubuntu, MX Linux</span>
+sudo systemctl enable --now ssh       <span class="c"># systemd (Fedora/Arch: sshd)</span>
+sudo service ssh start                <span class="c"># sysvinit (napr. MX Linux v predvolenom režime)</span>
+sudo systemctl status ssh             <span class="c"># beží?</span>
+ip -br a                              <span class="c"># IP adresa, na ktorú sa pripájať</span></code></pre>
+
+  <h3>Firewall</h3>
+<pre><code>sudo ufw allow ssh                    <span class="c"># port 22</span>
+sudo ufw allow 2222/tcp               <span class="c"># ak si zmenil port</span>
+sudo ufw status</code></pre>
+
+  <h3>Bezpečné nastavenie</h3>
+  <p>Zmeny daj do vlastného súboru v <code>/etc/ssh/sshd_config.d/</code> (pri aktualizácii sa neprepíše):</p>
+<pre><code>sudo nano /etc/ssh/sshd_config.d/10-moje.conf</code></pre>
+<pre><code>PermitRootLogin no                <span class="c"># root sa priamo neprihlási</span>
+PasswordAuthentication no         <span class="c"># len kľúče – až keď kľúč funguje!</span>
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+#Port 2222                        <span class="c"># iný port – menej automatických pokusov</span></code></pre>
+<pre><code>sudo sshd -t                      <span class="c"># kontrola syntaxe – nič nevypíše = OK</span>
+sudo systemctl reload ssh         <span class="c"># alebo: sudo service ssh reload</span></code></pre>
+  <div class="note warn">
+    Pred vypnutím hesiel over, že prihlásenie kľúčom funguje. Po zmene konfigurácie <strong>nezatváraj</strong> aktuálne pripojenie – otestuj prihlásenie v <strong>novom</strong> okne. Ak niečo nejde, v starom okne to ešte opravíš.
+  </div>
+  </section>
+
+  <!-- ===== Používatelia ===== -->
+  <section class="box t2">
+  <h2 id="pouzivatelia">Povolenie používateľov cez SSH</h2>
+  <p>Predvolene sa môže cez SSH prihlásiť <strong>každý</strong> používateľ systému, ktorý má heslo alebo kľúč (okrem roota, ak je <code>PermitRootLogin no</code>). Obmedzenie sa robí v <code>sshd_config</code>.</p>
+
+  <div class="step">
+    <h3><span class="n">1</span>Vytvoriť používateľa</h3>
+<pre><code>sudo adduser jano                 <span class="c"># vytvorí účet, domovský adresár, spýta sa heslo</span>
+sudo usermod -aG sudo jano        <span class="c"># voliteľne: práva správcu (Fedora: skupina wheel)</span></code></pre>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">2</span>Dať mu kľúč</h3>
+    <p>Jano vygeneruje kľúč <strong>u seba</strong> a pošle ti len <code>.pub</code>. Ty ho na serveri vložíš:</p>
+<pre><code>sudo install -d -m 700 -o jano -g jano /home/jano/.ssh
+sudo nano /home/jano/.ssh/authorized_keys          <span class="c"># vlož jeho verejný kľúč</span>
+sudo chown jano:jano /home/jano/.ssh/authorized_keys
+sudo chmod 600 /home/jano/.ssh/authorized_keys</code></pre>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">3</span>Povoliť len vybraných</h3>
+    <p>V <code>/etc/ssh/sshd_config.d/10-moje.conf</code> zvoľ jeden spôsob:</p>
+<pre><code>AllowUsers admin jano             <span class="c"># len títo používatelia (ostatní sú odmietnutí)</span>
+AllowUsers jano@192.168.1.*       <span class="c"># jano len z lokálnej siete</span>
+AllowGroups sshusers              <span class="c"># alebo: len členovia skupiny</span>
+DenyUsers test                    <span class="c"># zakázať konkrétneho</span></code></pre>
+    <p>Pri skupine:</p>
+<pre><code>sudo groupadd sshusers
+sudo usermod -aG sshusers jano
+sudo usermod -aG sshusers admin   <span class="c"># nezabudni na seba!</span></code></pre>
+<pre><code>sudo sshd -t &amp;&amp; sudo systemctl reload ssh</code></pre>
+  </div>
+
+  <div class="step">
+    <h3><span class="n">4</span>Výnimky pre jedného používateľa</h3>
+<pre><code>Match User zaloha                 <span class="c"># musí byť na konci súboru</span>
+    PasswordAuthentication no
+    AllowTcpForwarding no
+    X11Forwarding no</code></pre>
+  </div>
+
+  <h3>Zablokovať alebo odobrať prístup</h3>
+<pre><code>sudo usermod -L jano                       <span class="c"># zamknúť heslo (kľúč by ešte fungoval)</span>
+sudo usermod -s /usr/sbin/nologin jano     <span class="c"># zakázať prihlásenie úplne</span>
+sudo rm /home/jano/.ssh/authorized_keys    <span class="c"># zmazať jeho kľúče</span>
+who                                        <span class="c"># kto je práve prihlásený</span>
+last -n 20                                 <span class="c"># história prihlásení</span>
+sudo journalctl -u ssh -n 50               <span class="c"># záznam SSH servera (inak /var/log/auth.log)</span></code></pre>
+  </section>
+
+  <!-- ===== Windows server ===== -->
+  <section class="box t3">
+  <h2 id="winserver">SSH server vo Windows</h2>
+  <p>Windows 10/11 a Windows Server majú OpenSSH server ako voliteľnú súčasť. PowerShell <strong>ako správca</strong>:</p>
+<pre><code>Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+Start-Service sshd
+Set-Service -Name sshd -StartupType Automatic
+Get-NetFirewallRule -Name *ssh*        <span class="c"># inštalácia pridá pravidlo pre port 22</span></code></pre>
+
+  <h3>Kam dať verejný kľúč</h3>
+  <ul>
+    <li><strong>Bežný používateľ:</strong> <code>C:\Users\meno\.ssh\authorized_keys</code></li>
+    <li><strong>Člen skupiny Administrators:</strong> <code>C:\ProgramData\ssh\administrators_authorized_keys</code> – súbor v profile sa pre adminov <strong>ignoruje</strong>.</li>
+  </ul>
+<pre><code><span class="c"># pre administrátora (PowerShell ako správca)</span>
+Add-Content C:\ProgramData\ssh\administrators_authorized_keys "ssh-ed25519 AAAA… meno@pocitac"
+icacls C:\ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"</code></pre>
+
+  <h3>Povolenie používateľov</h3>
+  <p>V <code>C:\ProgramData\ssh\sshd_config</code> fungujú tie isté voľby (<code>AllowUsers</code>, <code>AllowGroups</code>, <code>PasswordAuthentication</code>). Mená sa píšu malými písmenami, doménové ako <code>domena\meno</code>.</p>
+<pre><code>Restart-Service sshd</code></pre>
+  <p>Predvolený shell po prihlásení je <code>cmd</code>. Zmena na PowerShell:</p>
+<pre><code>New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force</code></pre>
+  </section>
+
+  <!-- ===== Prenos súborov ===== -->
+  <section class="box t4">
+  <h2 id="prenos">Prenos súborov</h2>
+<pre><code>scp subor.txt meno@server:/home/meno/          <span class="c"># na server</span>
+scp meno@server:/var/log/syslog .              <span class="c"># zo servera do aktuálneho adresára</span>
+scp -r adresar/ meno@server:~/zaloha/          <span class="c"># celý adresár</span>
+scp -P 2222 subor.txt meno@server:~            <span class="c"># iný port (veľké P)</span>
+scp subor.txt domaci:~                         <span class="c"># so skratkou z ~/.ssh/config</span></code></pre>
+<pre><code>rsync -avz --progress adresar/ meno@server:~/zaloha/   <span class="c"># Linux: prenesie len zmeny</span>
+rsync -avz --delete adresar/ domaci:~/zaloha/          <span class="c"># zrkadlo – zmaže aj, čo u teba už nie je</span></code></pre>
+<pre><code>sftp meno@server          <span class="c"># interaktívne: ls, cd, get subor, put subor, exit</span></code></pre>
+  <p>Graficky: vo Windows <strong>WinSCP</strong> alebo <strong>FileZilla</strong> (protokol SFTP), v Linuxe správca súborov – do adresy zadaj <code>sftp://meno@server/</code>.</p>
+  </section>
+
+  <!-- ===== Tunely ===== -->
+  <section class="box t5">
+  <h2 id="tunely">Tunely a skok cez server</h2>
+<pre><code>ssh -L 8080:localhost:80 meno@server     <span class="c"># http://localhost:8080 u teba = port 80 na serveri</span>
+ssh -L 5432:db.lan:5432 meno@server      <span class="c"># prístup k stroju za serverom</span>
+ssh -R 9000:localhost:3000 meno@server   <span class="c"># opačne: port 9000 na serveri = tvoj port 3000</span>
+ssh -D 1080 meno@server                  <span class="c"># SOCKS proxy – prehliadač ide cez server</span>
+ssh -N -L 8080:localhost:80 meno@server  <span class="c"># len tunel, bez príkazového riadku</span>
+ssh -J brana meno@vnutorny               <span class="c"># pripojenie cez prechodný server (jump host)</span></code></pre>
+  <p>V <code>config</code> sa skok zapíše ako <code>ProxyJump brana</code>.</p>
+  <h3>Príkaz na serveri bez prihlásenia do shellu</h3>
+<pre><code>ssh domaci "df -h"                       <span class="c"># spustí príkaz a skončí</span>
+ssh -t domaci "sudo apt update"          <span class="c"># -t pre príkazy, ktoré sa pýtajú heslo</span></code></pre>
+  </section>
+
+  <!-- ===== Chyby ===== -->
+  <section class="box t0">
+  <h2 id="chyby">Riešenie chýb</h2>
+<pre><code>ssh -v meno@server        <span class="c"># podrobný výpis – ukáže, ktoré kľúče skúša a prečo zlyhá (-vvv ešte viac)</span></code></pre>
+  <div class="tw">
+  <table>
+    <tr><th>Hláška</th><th>Príčina a riešenie</th></tr>
+    <tr><td><code>Permission denied (publickey)</code></td><td>Server nepozná tvoj kľúč, alebo sa ponúka iný kľúč. Skontroluj obsah <code>authorized_keys</code>, práva súborov, správneho používateľa a <code>IdentityFile</code> v configu. Na serveri pozri <code>journalctl -u ssh</code>.</td></tr>
+    <tr><td><code>Connection refused</code></td><td>Server nebeží alebo počúva na inom porte: <code>systemctl status ssh</code>, <code>ss -tlnp | grep ssh</code>.</td></tr>
+    <tr><td><code>Connection timed out</code></td><td>Zlá IP adresa alebo blokuje firewall / router.</td></tr>
+    <tr><td><code>REMOTE HOST IDENTIFICATION HAS CHANGED</code></td><td>Server má nové kľúče (preinštalovanie) – alebo útok. Ak vieš, prečo sa zmenil: <code>ssh-keygen -R server</code> a pripoj sa znova.</td></tr>
+    <tr><td><code>UNPROTECTED PRIVATE KEY FILE</code></td><td>Privátny kľúč má príliš voľné práva – <a href="#prava">oprav práva</a>.</td></tr>
+    <tr><td><code>Too many authentication failures</code></td><td>Agent ponúka priveľa kľúčov. V configu daj <code>IdentitiesOnly yes</code> a konkrétny <code>IdentityFile</code>.</td></tr>
+    <tr><td>stále pýta heslo účtu</td><td>Kľúč sa nepoužil – v Linuxe často zlé práva domovského adresára alebo <code>~/.ssh</code>; vo Windows admin s kľúčom v profile namiesto <code>administrators_authorized_keys</code>.</td></tr>
+    <tr><td>spojenie po chvíli spadne</td><td><code>ServerAliveInterval 60</code> v configu klienta.</td></tr>
+  </table>
+  </div>
+  </section>
+
+  <!-- ===== Ťahák ===== -->
+  <section class="box t1">
+  <h2 id="tahak">Ťahák</h2>
+  <div class="tw">
+  <table>
+    <tr><th>Príkaz</th><th>Čo robí</th></tr>
+    <tr><td><code>ssh-keygen -t ed25519 -C "…"</code></td><td>vygenerovať pár kľúčov</td></tr>
+    <tr><td><code>ssh-copy-id meno@server</code></td><td>skopírovať verejný kľúč na server (Linux)</td></tr>
+    <tr><td><code>ssh meno@server</code></td><td>pripojiť sa</td></tr>
+    <tr><td><code>ssh -p 2222 meno@server</code></td><td>pripojiť sa na iný port</td></tr>
+    <tr><td><code>ssh-add</code></td><td>pridať kľúč do agenta</td></tr>
+    <tr><td><code>ssh -T git@github.com</code></td><td>test kľúča na GitHube</td></tr>
+    <tr><td><code>scp subor meno@server:~</code></td><td>skopírovať súbor na server</td></tr>
+    <tr><td><code>rsync -avz src/ server:dst/</code></td><td>synchronizovať adresár</td></tr>
+    <tr><td><code>ssh-keygen -R server</code></td><td>zabudnúť odtlačok servera</td></tr>
+    <tr><td><code>ssh-keygen -lf kluc.pub</code></td><td>odtlačok kľúča</td></tr>
+    <tr><td><code>sudo sshd -t</code></td><td>skontrolovať konfiguráciu servera</td></tr>
+    <tr><td><code>sudo systemctl reload ssh</code></td><td>načítať novú konfiguráciu servera</td></tr>
+    <tr><td><code>ssh -v meno@server</code></td><td>podrobný výpis pri problémoch</td></tr>
+  </table>
+  </div>
+  </section>
+</main>
+<script>
+// Tlačidlo „Kopírovať“ pri každom bloku príkazov (komentáre # sa nekopírujú).
+document.querySelectorAll("pre").forEach(function (pre) {
+  var b = document.createElement("button");
+  b.className = "copy";
+  b.type = "button";
+  b.textContent = "Kopírovať";
+  b.addEventListener("click", function () {
+    var kod = pre.querySelector("code").cloneNode(true);
+    kod.querySelectorAll(".c").forEach(function (c) { c.remove(); });
+    var text = kod.textContent.split("\n")
+      .map(function (r) { return r.replace(/\s+$/, ""); })
+      .filter(function (r) { return r !== ""; })
+      .join("\n");
+    function hotovo() { b.textContent = "Skopírované ✓"; setTimeout(function () { b.textContent = "Kopírovať"; }, 1500); }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(hotovo);
+    } else {
+      var t = document.createElement("textarea");
+      t.value = text; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); hotovo(); } catch (e) {}
+      t.remove();
+    }
+  });
+  pre.appendChild(b);
+});
+</script>
+</body>
+</html>
