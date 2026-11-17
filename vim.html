@@ -1,0 +1,1394 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vim – kompletný návod</title>
+<meta name="description" content="Vim od úplných základov: režimy, ukončenie, pohyb, úpravy, operátory a textové objekty, registre a schránka, vizuálny režim, hľadanie a nahrádzanie, buffre, okná a karty, makrá, .vimrc, pluginy, riešenie problémov a ťahák.">
+<link rel="stylesheet" href="style.css">
+<style>
+  main { max-width: 1500px; padding: 24px 20px 64px; }
+
+  :root {
+    --t0: #eef4ff; --s0: #3b82f6;
+    --t1: #eefaf2; --s1: #16a34a;
+    --t2: #fff7ea; --s2: #d97706;
+    --t3: #f5f0ff; --s3: #7c3aed;
+    --t4: #ebf9fa; --s4: #0d9488;
+    --t5: #fff0f3; --s5: #e11d48;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --t0: #1a2233; --s0: #5b8def;
+      --t1: #182a20; --s1: #3fbf6f;
+      --t2: #2c2416; --s2: #e0a040;
+      --t3: #241e33; --s3: #a083f0;
+      --t4: #162a2b; --s4: #33b5a8;
+      --t5: #2e1a20; --s5: #ef6080;
+    }
+  }
+  .box {
+    background: var(--tint); border: 1px solid var(--border);
+    border-top: 4px solid var(--stripe); border-radius: 12px;
+    padding: 4px 20px 14px; margin: 0 0 20px;
+  }
+  .box h2 { margin: 12px 0 8px; padding-top: 0; border-top: 0; color: var(--stripe); }
+  .t0 { --tint: var(--t0); --stripe: var(--s0); }
+  .t1 { --tint: var(--t1); --stripe: var(--s1); }
+  .t2 { --tint: var(--t2); --stripe: var(--s2); }
+  .t3 { --tint: var(--t3); --stripe: var(--s3); }
+  .t4 { --tint: var(--t4); --stripe: var(--s4); }
+  .t5 { --tint: var(--t5); --stripe: var(--s5); }
+  .box pre { background: var(--card); }
+  .box .note { background: var(--card); }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 16px 0 8px; padding: 0; list-style: none; }
+  .toc li { margin: 0; }
+  .toc a {
+    display: inline-block; padding: 4px 10px; border: 1px solid var(--border);
+    border-radius: 999px; background: var(--card); text-decoration: none; font-size: 0.9rem;
+  }
+  .toc a:hover { border-color: var(--accent); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .cols > div { min-width: 0; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  .os {
+    display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 0.8rem;
+    font-weight: 600; background: var(--card); border: 1px solid var(--border); margin-right: 6px;
+  }
+
+  kbd {
+    display: inline-block; min-width: 1.5em; padding: 0 6px; text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; line-height: 1.6;
+    background: var(--card); border: 1px solid var(--border); border-bottom-width: 2px;
+    border-radius: 5px; white-space: nowrap;
+  }
+
+  /* Schéma režimov. */
+  .modes { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin: 14px 0; }
+  .modes .center { grid-column: 2; grid-row: 1 / span 3; }
+  .mode {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px;
+  }
+  .mode strong { display: block; margin-bottom: 4px; color: var(--stripe); }
+  .mode div { font-size: 0.92rem; }
+  .mode.main { border: 2px solid var(--stripe); text-align: center; }
+  @media (max-width: 800px) {
+    .modes { grid-template-columns: 1fr; }
+    .modes .center { grid-column: 1; grid-row: auto; }
+  }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
+  @media (max-width: 900px) { .grid3 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 6px 14px 10px; }
+  .card h3 { margin-top: 8px; }
+
+  .formula {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 16px; margin: 12px 0; font-size: 1.05rem; text-align: center;
+  }
+  .formula b { color: var(--stripe); }
+
+  pre { position: relative; }
+  pre .c { color: var(--muted); }
+  .copy {
+    position: absolute; top: 6px; right: 6px; font: 12px system-ui, sans-serif;
+    padding: 2px 8px; border-radius: 5px; border: 1px solid var(--border);
+    background: var(--card); color: var(--muted); cursor: pointer; opacity: 0.75;
+  }
+  .copy:hover { opacity: 1; color: var(--text); }
+
+  .tw { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+  td:first-child { white-space: nowrap; }
+  @media (max-width: 600px) { td:first-child { white-space: normal; } }
+  .warn { border-left-color: #d9534f; }
+
+  .tahak { columns: 3 340px; column-gap: 20px; }
+  .tahak .card { break-inside: avoid; margin: 0 0 14px; }
+  .tahak table { font-size: 0.9rem; margin: 6px 0; }
+  .tahak td { padding: 4px 6px; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="back"><a href="index.html">← Späť na návody</a></nav>
+  <h1>Vim – kompletný návod</h1>
+  <p class="lead">Od „ako sa z toho dostanem von“ až po makrá a vlastnú konfiguráciu. Režimy, pohyb, úpravy, operátory a textové objekty, registre a systémová schránka, hľadanie a nahrádzanie, viac súborov naraz, <code>.vimrc</code>, pluginy, riešenie problémov a ťahák.</p>
+
+  <ul class="toc">
+    <li><a href="#co-je">Čo je Vim</a></li>
+    <li><a href="#instalacia">Inštalácia a spustenie</a></li>
+    <li><a href="#rezimy">Režimy</a></li>
+    <li><a href="#ukoncenie">Uloženie a ukončenie</a></li>
+    <li><a href="#pohyb">Pohyb</a></li>
+    <li><a href="#vkladanie">Vkladanie textu</a></li>
+    <li><a href="#upravy">Mazanie a úpravy</a></li>
+    <li><a href="#gramatika">Operátory a textové objekty</a></li>
+    <li><a href="#undo">Späť, znova, bodka</a></li>
+    <li><a href="#registre">Kopírovanie a registre</a></li>
+    <li><a href="#vizualny">Vizuálny režim</a></li>
+    <li><a href="#hladanie">Hľadanie</a></li>
+    <li><a href="#nahradzanie">Nahrádzanie</a></li>
+    <li><a href="#subory">Súbory a buffre</a></li>
+    <li><a href="#okna">Okná a karty</a></li>
+    <li><a href="#znacky">Značky a skoky</a></li>
+    <li><a href="#makra">Makrá</a></li>
+    <li><a href="#prikazovy">Príkazový riadok a shell</a></li>
+    <li><a href="#dalsie">Skladanie, doplňovanie, pravopis</a></li>
+    <li><a href="#vimrc">Konfigurácia .vimrc</a></li>
+    <li><a href="#pluginy">Pluginy</a></li>
+    <li><a href="#neovim">Neovim</a></li>
+    <li><a href="#chyby">Riešenie problémov</a></li>
+    <li><a href="#tahak">Ťahák</a></li>
+  </ul>
+
+  <!-- ===== Čo je Vim ===== -->
+  <section class="box t0">
+  <h2 id="co-je">Čo je Vim</h2>
+  <p><strong>Vim</strong> (Vi IMproved) je textový editor, ktorý beží v termináli a nájdeš ho takmer na každom Linuxe, serveri aj v Git Bashi na Windows. Na rozdiel od bežných editorov je <strong>modálny</strong>: klávesy robia iné veci podľa toho, v akom režime práve si. V jednom režime písmená píšu text, v inom sú to príkazy („zmaž slovo“, „skoč na koniec riadku“).</p>
+  <p>Na začiatku to pôsobí zvláštne, ale výhoda je veľká: ruky nemusia opustiť klávesnicu a úpravy sa skladajú z krátkych „viet“ ako <kbd>d</kbd><kbd>w</kbd> = <em>delete word</em>. Keď sa naučíš pár slovies a pár pohybov, kombinácie dostaneš zadarmo.</p>
+  <div class="note">
+    <strong>Najdôležitejšia rada:</strong> keď nevieš, kde si, stlač <kbd>Esc</kbd> (aj dvakrát). Vždy ťa vráti do normálneho režimu, odkiaľ sa dá všetko.
+  </div>
+  <p>Zápis v tomto návode:</p>
+  <div class="tw">
+  <table>
+    <tr><th>Zápis</th><th>Znamená</th></tr>
+    <tr><td><kbd>d</kbd><kbd>w</kbd></td><td>stlač postupne <code>d</code> a potom <code>w</code> (nie naraz)</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>r</kbd></td><td>drž Ctrl a stlač <code>r</code> (vo Vim dokumentácii <code>&lt;C-r&gt;</code> alebo <code>^R</code>)</td></tr>
+    <tr><td><kbd>D</kbd></td><td>veľké písmeno = <kbd>Shift</kbd>+<kbd>d</kbd> – robí niečo iné ako malé <kbd>d</kbd></td></tr>
+    <tr><td><code>:w</code></td><td>príkaz – napíš dvojbodku, text a potvrď <kbd>Enter</kbd></td></tr>
+    <tr><td><code>{pohyb}</code></td><td>miesto pre ľubovoľný pohyb, napr. <kbd>w</kbd>, <kbd>$</kbd>, <kbd>j</kbd></td></tr>
+  </table>
+  </div>
+  </section>
+
+  <!-- ===== Inštalácia ===== -->
+  <section class="box t1">
+  <h2 id="instalacia">Inštalácia a spustenie</h2>
+  <div class="cols">
+    <div>
+      <h3><span class="os">Linux</span>Inštalácia</h3>
+      <p>Na mnohých distribúciách je predinštalovaný len okresaný <code>vim-tiny</code> (alebo <code>vi</code>). Plnú verziu doinštaluj:</p>
+<pre><code><span class="c"># Debian, Ubuntu, MX Linux, Mint</span>
+sudo apt install vim
+<span class="c"># verzia s podporou systémovej schránky (registre "+ a "*)</span>
+sudo apt install vim-gtk3
+<span class="c"># Fedora</span>
+sudo dnf install vim-enhanced
+<span class="c"># Arch</span>
+sudo pacman -S gvim</code></pre>
+      <p>Či verzia podporuje schránku zistíš príkazom <code>vim --version | grep clipboard</code> – musí tam byť <code>+clipboard</code>, nie <code>-clipboard</code>.</p>
+      <p>Nastavenie Vimu ako predvoleného editora (napr. pre <code>git commit</code>, <code>crontab -e</code>, <code>visudo</code>):</p>
+<pre><code>sudo update-alternatives --config editor
+<span class="c"># alebo len pre seba, do ~/.bashrc:</span>
+export EDITOR=vim
+export VISUAL=vim
+<span class="c"># a pre git:</span>
+git config --global core.editor vim</code></pre>
+    </div>
+    <div>
+      <h3><span class="os">Windows</span>Inštalácia</h3>
+      <p>Možnosti:</p>
+      <ul>
+        <li><strong>Git for Windows</strong> – Vim je súčasťou Git Bashu, stačí napísať <code>vim</code>.</li>
+        <li><strong>winget</strong> – nainštaluje Vim aj grafický gVim:</li>
+      </ul>
+<pre><code>winget install vim.vim</code></pre>
+      <ul>
+        <li><strong>WSL</strong> – v Ubuntu pod Windows rovnako ako v Linuxe (<code>sudo apt install vim</code>).</li>
+      </ul>
+      <p>Konfiguračný súbor je vo Windows <code>%USERPROFILE%\_vimrc</code> (s podčiarkovníkom) alebo <code>%USERPROFILE%\vimfiles\vimrc</code>. V Git Bashi sa používa linuxový <code>~/.vimrc</code>.</p>
+      <div class="note">
+        Vo Windows Termináli <kbd>Ctrl</kbd>+<kbd>v</kbd> vkladá zo schránky, takže blokový výber spúšťaj cez <kbd>Ctrl</kbd>+<kbd>q</kbd> (robí to isté).
+      </div>
+    </div>
+  </div>
+
+  <h3>Spustenie</h3>
+<pre><code>vim                    <span class="c"># prázdny editor</span>
+vim subor.txt          <span class="c"># otvorí (alebo vytvorí) súbor</span>
+vim +42 subor.txt      <span class="c"># otvorí a skočí na riadok 42</span>
+vim +/hladaj subor.txt <span class="c"># otvorí na prvom výskyte slova</span>
+vim a.txt b.txt        <span class="c"># viac súborov (prepínanie :bn / :bp)</span>
+vim -o a.txt b.txt     <span class="c"># pod sebou v oknách (-O vedľa seba)</span>
+vim -p a.txt b.txt     <span class="c"># každý v samostatnej karte</span>
+vim -d stary new       <span class="c"># porovnanie dvoch súborov (vimdiff)</span>
+vim -R subor.txt       <span class="c"># len na čítanie (to isté ako view)</span>
+ls -l | vim -          <span class="c"># otvorí výstup príkazu</span>
+sudoedit /etc/hosts    <span class="c"># bezpečná úprava systémového súboru</span></code></pre>
+
+  <h3>Interaktívny tutoriál</h3>
+  <p>Vim má zabudovaný kurz na cca 30 minút, ktorý ťa prevedie základmi priamo v editore. Ak ho máš v slovenčine, spustí sa sám podľa jazyka systému:</p>
+<pre><code>vimtutor
+vimtutor sk     <span class="c"># vynútiť slovenskú verziu</span></code></pre>
+  <p>Pomoc priamo vo Vime: <code>:help</code>, <code>:help dw</code>, <code>:help :s</code>, <code>:help 'number'</code> (nastavenia v apostrofoch). V pomocníkovi skáčeš na odkaz <kbd>Ctrl</kbd>+<kbd>]</kbd>, späť <kbd>Ctrl</kbd>+<kbd>o</kbd>, zavrieš <code>:q</code>.</p>
+  </section>
+
+  <!-- ===== Režimy ===== -->
+  <section class="box t2">
+  <h2 id="rezimy">Režimy</h2>
+  <p>Všetko sa točí okolo <strong>normálneho režimu</strong>. Z neho odbočíš do iného režimu, urobíš tam, čo treba, a <kbd>Esc</kbd> ťa vráti späť. Aktuálny režim vidíš vľavo dole (<code>-- INSERT --</code>, <code>-- VISUAL --</code>…). V normálnom režime tam nie je nič.</p>
+
+  <div class="modes">
+    <div class="mode">
+      <strong>✏️ Vkladací (Insert)</strong>
+      <div>Píšeš text ako v bežnom editore.</div>
+      <div>Vstup: <kbd>i</kbd> <kbd>a</kbd> <kbd>o</kbd> <kbd>I</kbd> <kbd>A</kbd> <kbd>O</kbd> <kbd>c</kbd>…</div>
+    </div>
+    <div class="mode main center">
+      <strong>⌨️ Normálny (Normal)</strong>
+      <div>Štartovací režim.</div>
+      <div>Klávesy = príkazy:<br>pohyb, mazanie, kopírovanie.</div>
+      <div style="margin-top:6px">Návrat sem: <kbd>Esc</kbd></div>
+    </div>
+    <div class="mode">
+      <strong>🔍 Vizuálny (Visual)</strong>
+      <div>Označuješ text a potom s ním niečo urobíš.</div>
+      <div>Vstup: <kbd>v</kbd> <kbd>V</kbd> <kbd>Ctrl</kbd>+<kbd>v</kbd></div>
+    </div>
+    <div class="mode">
+      <strong>💬 Príkazový riadok (Command-line)</strong>
+      <div>Príkazy so zadaním dole: uložiť, nahradiť, nastaviť.</div>
+      <div>Vstup: <kbd>:</kbd> &nbsp; hľadanie: <kbd>/</kbd> <kbd>?</kbd></div>
+    </div>
+    <div class="mode">
+      <strong>🔁 Prepisovací (Replace)</strong>
+      <div>Písaný text prepisuje existujúci.</div>
+      <div>Vstup: <kbd>R</kbd> (jeden znak: <kbd>r</kbd>)</div>
+    </div>
+  </div>
+
+  <div class="note">
+    Typická chyba začiatočníka je ostať stále vo vkladacom režime a pohybovať sa šípkami. Funguje to, ale prichádzaš o celú silu Vimu. Zvykni si: <strong>napíšeš kúsok textu → <kbd>Esc</kbd></strong>. Normálny režim je „domov“, vkladací len krátka návšteva.
+  </div>
+  </section>
+
+  <!-- ===== Ukončenie ===== -->
+  <section class="box t5">
+  <h2 id="ukoncenie">Uloženie a ukončenie</h2>
+  <p>Najznámejšia otázka o Vime. Najprv <kbd>Esc</kbd>, potom:</p>
+  <div class="tw">
+  <table>
+    <tr><th>Príkaz</th><th>Čo robí</th></tr>
+    <tr><td><code>:w</code></td><td>uložiť</td></tr>
+    <tr><td><code>:q</code></td><td>ukončiť (nejde, ak sú neuložené zmeny)</td></tr>
+    <tr><td><code>:wq</code> alebo <code>:x</code></td><td>uložiť a ukončiť (<code>:x</code> zapisuje len pri zmene)</td></tr>
+    <tr><td><kbd>Z</kbd><kbd>Z</kbd></td><td>to isté ako <code>:x</code>, bez dvojbodky</td></tr>
+    <tr><td><code>:q!</code></td><td>ukončiť <strong>bez uloženia</strong>, zmeny zahodiť</td></tr>
+    <tr><td><kbd>Z</kbd><kbd>Q</kbd></td><td>to isté ako <code>:q!</code></td></tr>
+    <tr><td><code>:qa</code> / <code>:qa!</code></td><td>zavrieť všetky okná / bez uloženia</td></tr>
+    <tr><td><code>:wa</code> / <code>:wqa</code></td><td>uložiť všetky súbory / uložiť všetky a skončiť</td></tr>
+    <tr><td><code>:w novy.txt</code></td><td>uložiť kópiu pod iným menom (ďalej upravuješ pôvodný)</td></tr>
+    <tr><td><code>:saveas novy.txt</code></td><td>uložiť ako – ďalej upravuješ nový súbor</td></tr>
+    <tr><td><code>:w !sudo tee %</code></td><td>uložiť súbor, na ktorý nemáš práva (zabudol si <code>sudo</code>)</td></tr>
+    <tr><td><code>:e!</code></td><td>zahodiť zmeny a načítať súbor znova z disku</td></tr>
+  </table>
+  </div>
+  <div class="note warn">
+    <strong>Git otvoril Vim pri commite alebo merge?</strong> Napíš správu, potom <kbd>Esc</kbd> a <code>:wq</code>. Ak chceš commit zrušiť, <code>:cq</code> – ukončí Vim s chybou a git commit nevytvorí.
+  </div>
+  </section>
+
+  <!-- ===== Pohyb ===== -->
+  <section class="box t0">
+  <h2 id="pohyb">Pohyb</h2>
+  <p>Šípky fungujú, ale domovský rad je rýchlejší: <kbd>h</kbd> ← &nbsp; <kbd>j</kbd> ↓ &nbsp; <kbd>k</kbd> ↑ &nbsp; <kbd>l</kbd> →. (Pomôcka: <kbd>j</kbd> má „háčik“ dole.) Pred každý pohyb môžeš dať <strong>číslo</strong>: <kbd>5</kbd><kbd>j</kbd> = 5 riadkov dole, <kbd>3</kbd><kbd>w</kbd> = 3 slová dopredu.</p>
+
+  <div class="grid3">
+    <div class="card">
+      <h3>Po slovách</h3>
+      <table>
+        <tr><td><kbd>w</kbd></td><td>začiatok ďalšieho slova</td></tr>
+        <tr><td><kbd>b</kbd></td><td>začiatok predchádzajúceho slova</td></tr>
+        <tr><td><kbd>e</kbd></td><td>koniec slova</td></tr>
+        <tr><td><kbd>g</kbd><kbd>e</kbd></td><td>koniec predchádzajúceho slova</td></tr>
+        <tr><td><kbd>W</kbd> <kbd>B</kbd> <kbd>E</kbd></td><td>to isté, ale „SLOVO“ = všetko po medzeru (aj <code>a.b-c/d</code>)</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>V riadku</h3>
+      <table>
+        <tr><td><kbd>0</kbd></td><td>úplný začiatok riadku</td></tr>
+        <tr><td><kbd>^</kbd></td><td>prvý nemedzerový znak</td></tr>
+        <tr><td><kbd>$</kbd></td><td>koniec riadku</td></tr>
+        <tr><td><kbd>f</kbd><kbd>x</kbd></td><td>na najbližší znak <code>x</code> vpravo</td></tr>
+        <tr><td><kbd>t</kbd><kbd>x</kbd></td><td>tesne pred znak <code>x</code></td></tr>
+        <tr><td><kbd>F</kbd><kbd>x</kbd> <kbd>T</kbd><kbd>x</kbd></td><td>to isté doľava</td></tr>
+        <tr><td><kbd>;</kbd> <kbd>,</kbd></td><td>zopakovať <code>f/t</code> dopredu / dozadu</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>V súbore</h3>
+      <table>
+        <tr><td><kbd>g</kbd><kbd>g</kbd></td><td>prvý riadok</td></tr>
+        <tr><td><kbd>G</kbd></td><td>posledný riadok</td></tr>
+        <tr><td><kbd>4</kbd><kbd>2</kbd><kbd>G</kbd> / <code>:42</code></td><td>riadok 42</td></tr>
+        <tr><td><kbd>5</kbd><kbd>0</kbd><kbd>%</kbd></td><td>na polovicu súboru</td></tr>
+        <tr><td><kbd>%</kbd></td><td>na párovú zátvorku <code>( ) [ ] { }</code></td></tr>
+        <tr><td><kbd>{</kbd> <kbd>}</kbd></td><td>predchádzajúci / ďalší odsek (prázdny riadok)</td></tr>
+        <tr><td><kbd>(</kbd> <kbd>)</kbd></td><td>predchádzajúca / ďalšia veta</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Obrazovka</h3>
+      <table>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>d</kbd> / <kbd>u</kbd></td><td>pol obrazovky dole / hore</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>f</kbd> / <kbd>b</kbd></td><td>celá obrazovka dole / hore</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>e</kbd> / <kbd>y</kbd></td><td>posunúť text o riadok, kurzor ostáva</td></tr>
+        <tr><td><kbd>H</kbd> <kbd>M</kbd> <kbd>L</kbd></td><td>vrch / stred / spodok obrazovky</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Centrovanie</h3>
+      <table>
+        <tr><td><kbd>z</kbd><kbd>z</kbd></td><td>aktuálny riadok do stredu obrazovky</td></tr>
+        <tr><td><kbd>z</kbd><kbd>t</kbd></td><td>riadok na vrch</td></tr>
+        <tr><td><kbd>z</kbd><kbd>b</kbd></td><td>riadok na spodok</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Dlhé zalomené riadky</h3>
+      <table>
+        <tr><td><kbd>g</kbd><kbd>j</kbd> <kbd>g</kbd><kbd>k</kbd></td><td>o zobrazený riadok (nie skutočný)</td></tr>
+        <tr><td><kbd>g</kbd><kbd>0</kbd> <kbd>g</kbd><kbd>$</kbd></td><td>začiatok / koniec zobrazeného riadku</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="note">
+    <strong>Relatívne čísla riadkov</strong> (<code>:set relativenumber</code>) ukazujú, o koľko riadkov je ktorý riadok vzdialený. Potom vidíš, že stačí <kbd>7</kbd><kbd>j</kbd> alebo <kbd>d</kbd><kbd>4</kbd><kbd>k</kbd>, a netreba počítať.
+  </div>
+  </section>
+
+  <!-- ===== Vkladanie ===== -->
+  <section class="box t1">
+  <h2 id="vkladanie">Vkladanie textu</h2>
+  <p>Každý z týchto príkazov ťa prepne do vkladacieho režimu – líšia sa len tým, <strong>kam</strong> sa postaví kurzor:</p>
+  <div class="tw">
+  <table>
+    <tr><th>Kláves</th><th>Začne písať</th></tr>
+    <tr><td><kbd>i</kbd></td><td>pred kurzorom (<em>insert</em>)</td></tr>
+    <tr><td><kbd>a</kbd></td><td>za kurzorom (<em>append</em>)</td></tr>
+    <tr><td><kbd>I</kbd></td><td>na začiatku riadku (za odsadením)</td></tr>
+    <tr><td><kbd>A</kbd></td><td>na konci riadku</td></tr>
+    <tr><td><kbd>o</kbd></td><td>na novom riadku pod aktuálnym</td></tr>
+    <tr><td><kbd>O</kbd></td><td>na novom riadku nad aktuálnym</td></tr>
+    <tr><td><kbd>g</kbd><kbd>i</kbd></td><td>tam, kde si naposledy písal</td></tr>
+    <tr><td><kbd>g</kbd><kbd>I</kbd></td><td>úplne na stĺpci 1 (pred odsadením)</td></tr>
+    <tr><td><kbd>s</kbd></td><td>zmaže znak pod kurzorom a píše</td></tr>
+    <tr><td><kbd>S</kbd> / <kbd>c</kbd><kbd>c</kbd></td><td>zmaže celý riadok (odsadenie ostane) a píše</td></tr>
+    <tr><td><kbd>C</kbd></td><td>zmaže od kurzora do konca riadku a píše</td></tr>
+  </table>
+  </div>
+  <p>Číslo pred vkladaním text zopakuje: <kbd>3</kbd><kbd>0</kbd><kbd>i</kbd><code>-</code><kbd>Esc</kbd> vloží 30 pomlčiek. <kbd>5</kbd><kbd>o</kbd><code>ahoj</code><kbd>Esc</kbd> vytvorí 5 riadkov „ahoj“.</p>
+
+  <h3>Klávesy vo vkladacom režime</h3>
+  <div class="tw">
+  <table>
+    <tr><th>Kláves</th><th>Čo robí</th></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd></td><td>zmaže slovo pred kurzorom</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>u</kbd></td><td>zmaže všetko pred kurzorom v riadku</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>h</kbd></td><td>ako Backspace</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>t</kbd> / <kbd>Ctrl</kbd>+<kbd>d</kbd></td><td>odsadiť / zrušiť odsadenie riadku</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>n</kbd> / <kbd>Ctrl</kbd>+<kbd>p</kbd></td><td>doplniť slovo (z otvorených súborov)</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>r</kbd> <kbd>a</kbd></td><td>vložiť obsah registra <code>a</code> (<kbd>Ctrl</kbd>+<kbd>r</kbd> <kbd>+</kbd> = zo schránky)</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>o</kbd> {príkaz}</td><td>vykoná jeden príkaz normálneho režimu a vráti sa (napr. <kbd>Ctrl</kbd>+<kbd>o</kbd> <kbd>z</kbd><kbd>z</kbd>)</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>v</kbd> {znak}</td><td>vloží znak doslova (napr. skutočný Tab)</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>k</kbd> {dva znaky}</td><td>špeciálny znak (digraf): <code>Eu</code> → €, <code>a:</code> → ä, <code>-&gt;</code> → → (zoznam <code>:digraphs</code>)</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>[</kbd></td><td>to isté ako <kbd>Esc</kbd> (bližšie po ruke)</td></tr>
+  </table>
+  </div>
+  </section>
+
+  <!-- ===== Úpravy ===== -->
+  <section class="box t2">
+  <h2 id="upravy">Mazanie a úpravy (normálny režim)</h2>
+  <div class="tw">
+  <table>
+    <tr><th>Kláves</th><th>Čo robí</th></tr>
+    <tr><td><kbd>x</kbd></td><td>zmaže znak pod kurzorom (<kbd>X</kbd> pred kurzorom)</td></tr>
+    <tr><td><kbd>d</kbd><kbd>d</kbd></td><td>zmaže celý riadok (<kbd>5</kbd><kbd>d</kbd><kbd>d</kbd> = 5 riadkov)</td></tr>
+    <tr><td><kbd>D</kbd></td><td>zmaže od kurzora do konca riadku</td></tr>
+    <tr><td><kbd>r</kbd><kbd>x</kbd></td><td>nahradí znak pod kurzorom znakom <code>x</code> (ostáva v normálnom režime)</td></tr>
+    <tr><td><kbd>R</kbd></td><td>prepisovací režim – píšeš „cez“ existujúci text</td></tr>
+    <tr><td><kbd>J</kbd></td><td>spojí riadok s nasledujúcim (s medzerou; <kbd>g</kbd><kbd>J</kbd> bez medzery)</td></tr>
+    <tr><td><kbd>~</kbd></td><td>prepne veľkosť písmena pod kurzorom</td></tr>
+    <tr><td><kbd>&gt;</kbd><kbd>&gt;</kbd> / <kbd>&lt;</kbd><kbd>&lt;</kbd></td><td>odsadiť / zrušiť odsadenie riadku</td></tr>
+    <tr><td><kbd>=</kbd><kbd>=</kbd></td><td>automaticky správne odsadiť riadok (<kbd>g</kbd><kbd>g</kbd><kbd>=</kbd><kbd>G</kbd> = celý súbor)</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>a</kbd> / <kbd>Ctrl</kbd>+<kbd>x</kbd></td><td>zvýši / zníži najbližšie číslo v riadku (<kbd>1</kbd><kbd>0</kbd><kbd>Ctrl</kbd>+<kbd>a</kbd> = +10)</td></tr>
+    <tr><td><kbd>g</kbd><kbd>q</kbd><kbd>q</kbd></td><td>preformátuje (zalomí) dlhý riadok podľa <code>textwidth</code></td></tr>
+    <tr><td><kbd>x</kbd><kbd>p</kbd></td><td>prehodí dva znaky („pkéne“ → „pekné“)</td></tr>
+    <tr><td><kbd>d</kbd><kbd>d</kbd><kbd>p</kbd></td><td>prehodí riadok s nasledujúcim</td></tr>
+  </table>
+  </div>
+  <div class="note">
+    Mazanie vo Vime je zároveň <strong>vystrihnutie</strong> – zmazaný text ide do registra a môžeš ho vložiť cez <kbd>p</kbd>. Preto <kbd>d</kbd><kbd>d</kbd><kbd>p</kbd> presunie riadok.
+  </div>
+  </section>
+
+  <!-- ===== Gramatika ===== -->
+  <section class="box t3">
+  <h2 id="gramatika">Operátory a textové objekty – „gramatika“ Vimu</h2>
+  <p>Toto je srdce Vimu. Väčšina úprav sa skladá ako veta:</p>
+  <div class="formula">[<b>počet</b>] &nbsp;<b>operátor</b> (sloveso) &nbsp;+&nbsp; <b>pohyb</b> alebo <b>textový objekt</b> (predmet)</div>
+  <p>Stačí sa naučiť pár operátorov a pár pohybov – a každý operátor funguje s každým pohybom.</p>
+
+  <div class="cols">
+    <div>
+      <h3>Operátory (slovesá)</h3>
+      <table>
+        <tr><td><kbd>d</kbd></td><td>zmazať (delete) – aj vystrihne</td></tr>
+        <tr><td><kbd>c</kbd></td><td>zmeniť (change) = zmazať a prejsť do vkladania</td></tr>
+        <tr><td><kbd>y</kbd></td><td>kopírovať (yank)</td></tr>
+        <tr><td><kbd>&gt;</kbd> <kbd>&lt;</kbd></td><td>odsadiť / zrušiť odsadenie</td></tr>
+        <tr><td><kbd>=</kbd></td><td>automaticky odsadiť</td></tr>
+        <tr><td><kbd>g</kbd><kbd>U</kbd> / <kbd>g</kbd><kbd>u</kbd></td><td>na VEĽKÉ / malé písmená</td></tr>
+        <tr><td><kbd>g</kbd><kbd>~</kbd></td><td>prepnúť veľkosť písmen</td></tr>
+        <tr><td><kbd>g</kbd><kbd>q</kbd></td><td>preformátovať (zalomiť)</td></tr>
+        <tr><td><kbd>!</kbd></td><td>prefiltrovať cez externý príkaz</td></tr>
+      </table>
+      <p><strong>Zdvojený operátor = celý riadok:</strong> <kbd>d</kbd><kbd>d</kbd>, <kbd>c</kbd><kbd>c</kbd>, <kbd>y</kbd><kbd>y</kbd>, <kbd>&gt;</kbd><kbd>&gt;</kbd>, <kbd>g</kbd><kbd>U</kbd><kbd>U</kbd>.</p>
+    </div>
+    <div>
+      <h3>Príklady s pohybmi</h3>
+      <table>
+        <tr><td><kbd>d</kbd><kbd>w</kbd></td><td>zmaž po začiatok ďalšieho slova</td></tr>
+        <tr><td><kbd>c</kbd><kbd>w</kbd></td><td>prepíš zvyšok slova</td></tr>
+        <tr><td><kbd>d</kbd><kbd>$</kbd></td><td>zmaž do konca riadku (= <kbd>D</kbd>)</td></tr>
+        <tr><td><kbd>y</kbd><kbd>0</kbd></td><td>skopíruj od začiatku riadku po kurzor</td></tr>
+        <tr><td><kbd>d</kbd><kbd>t</kbd><kbd>,</kbd></td><td>zmaž po najbližšiu čiarku</td></tr>
+        <tr><td><kbd>c</kbd><kbd>f</kbd><kbd>)</kbd></td><td>prepíš vrátane najbližšej <code>)</code></td></tr>
+        <tr><td><kbd>d</kbd><kbd>3</kbd><kbd>j</kbd></td><td>zmaž aktuálny a 3 riadky pod ním</td></tr>
+        <tr><td><kbd>d</kbd><kbd>G</kbd></td><td>zmaž všetko po koniec súboru</td></tr>
+        <tr><td><kbd>y</kbd><kbd>g</kbd><kbd>g</kbd></td><td>skopíruj všetko po začiatok</td></tr>
+        <tr><td><kbd>&gt;</kbd><kbd>}</kbd></td><td>odsaď do konca odseku</td></tr>
+        <tr><td><kbd>d</kbd><kbd>/</kbd><code>koniec</code><kbd>Enter</kbd></td><td>zmaž po slovo „koniec“</td></tr>
+        <tr><td><kbd>g</kbd><kbd>U</kbd><kbd>i</kbd><kbd>w</kbd></td><td>slovo na VEĽKÉ písmená</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>Textové objekty</h3>
+  <p>Pohyb závisí od toho, kde stojí kurzor. <strong>Textový objekt</strong> nie – označí celú vec okolo kurzora. Používajú sa len po operátore (alebo vo vizuálnom režime). <kbd>i</kbd> = <em>inner</em> (len obsah), <kbd>a</kbd> = <em>a / around</em> (aj s okolím – medzerou, úvodzovkami, zátvorkami).</p>
+  <div class="tw">
+  <table>
+    <tr><th>Objekt</th><th><kbd>i</kbd>… (vnútro)</th><th><kbd>a</kbd>… (aj s okrajom)</th></tr>
+    <tr><td><kbd>w</kbd> slovo</td><td>slovo</td><td>slovo + medzera za ním</td></tr>
+    <tr><td><kbd>W</kbd> SLOVO</td><td>všetko po medzeru</td><td>+ medzera</td></tr>
+    <tr><td><kbd>s</kbd> veta</td><td>veta</td><td>veta + medzera</td></tr>
+    <tr><td><kbd>p</kbd> odsek</td><td>odsek</td><td>odsek + prázdny riadok</td></tr>
+    <tr><td><kbd>"</kbd> <kbd>'</kbd> <kbd>`</kbd></td><td>text v úvodzovkách</td><td>aj s úvodzovkami</td></tr>
+    <tr><td><kbd>(</kbd> alebo <kbd>b</kbd></td><td>obsah <code>( )</code></td><td>aj so zátvorkami</td></tr>
+    <tr><td><kbd>{</kbd> alebo <kbd>B</kbd></td><td>obsah <code>{ }</code></td><td>aj so zátvorkami</td></tr>
+    <tr><td><kbd>[</kbd></td><td>obsah <code>[ ]</code></td><td>aj so zátvorkami</td></tr>
+    <tr><td><kbd>&lt;</kbd></td><td>obsah <code>&lt; &gt;</code></td><td>aj so zátvorkami</td></tr>
+    <tr><td><kbd>t</kbd> HTML/XML tag</td><td>obsah medzi <code>&lt;b&gt;…&lt;/b&gt;</code></td><td>aj s tagmi</td></tr>
+  </table>
+  </div>
+  <p>Príklady – kurzor môže byť <em>kdekoľvek</em> vnútri:</p>
+<pre><code>ci"     <span class="c"># prepíš text v úvodzovkách:   "starý text"  →  "|"</span>
+da(     <span class="c"># zmaž zátvorku aj s obsahom:  f(a, b)  →  f</span>
+ci{     <span class="c"># prepíš telo funkcie / bloku</span>
+yap     <span class="c"># skopíruj celý odsek</span>
+dit     <span class="c"># vyprázdni HTML tag:  &lt;p&gt;text&lt;/p&gt;  →  &lt;p&gt;&lt;/p&gt;</span>
+diw     <span class="c"># zmaž slovo pod kurzorom (aj keď stojíš v jeho strede)</span>
+daw     <span class="c"># zmaž slovo aj s medzerou – veta ostane úhľadná</span>
+&gt;i{     <span class="c"># odsaď obsah bloku { }</span>
+vi[     <span class="c"># označ obsah hranatých zátvoriek</span></code></pre>
+  <div class="note">
+    <strong>Prečo <kbd>c</kbd><kbd>i</kbd><kbd>w</kbd> a nie <kbd>c</kbd><kbd>w</kbd>?</strong> <kbd>c</kbd><kbd>w</kbd> mení len od kurzora po koniec slova. <kbd>c</kbd><kbd>i</kbd><kbd>w</kbd> mení celé slovo, nech stojíš kdekoľvek – a dá sa zopakovať bodkou na iných slovách.
+  </div>
+  </section>
+
+  <!-- ===== Undo ===== -->
+  <section class="box t4">
+  <h2 id="undo">Späť, znova a magická bodka</h2>
+  <div class="tw">
+  <table>
+    <tr><th>Kláves / príkaz</th><th>Čo robí</th></tr>
+    <tr><td><kbd>u</kbd></td><td>späť (undo) – celá posledná zmena naraz, aj dlhý odsek napísaný v jednom vkladaní</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>r</kbd></td><td>znova (redo)</td></tr>
+    <tr><td><kbd>U</kbd></td><td>vráti všetky zmeny v aktuálnom riadku</td></tr>
+    <tr><td><kbd>.</kbd></td><td><strong>zopakuje poslednú zmenu</strong></td></tr>
+    <tr><td><code>:earlier 5m</code> / <code>:later 5m</code></td><td>stav súboru spred 5 minút / dopredu v čase</td></tr>
+    <tr><td><code>:earlier 1f</code></td><td>stav pri poslednom uložení</td></tr>
+    <tr><td><kbd>g</kbd><kbd>-</kbd> / <kbd>g</kbd><kbd>+</kbd></td><td>prechádzanie celým stromom zmien (aj vetvami, ktoré undo „prepísal“)</td></tr>
+  </table>
+  </div>
+  <h3>Bodka <kbd>.</kbd></h3>
+  <p>Bodka zopakuje poslednú <em>zmenu</em> – všetko od operátora alebo vstupu do vkladania po <kbd>Esc</kbd>. Kombinuje sa s hľadaním:</p>
+<pre><code><span class="c"># Premenovať niekoľko výskytov slova „pocet“ na „count“, ale nie všetky:</span>
+/pocet&lt;Enter&gt;      <span class="c"># nájdi prvý výskyt</span>
+ciwcount&lt;Esc&gt;      <span class="c"># zmeň ho</span>
+n                  <span class="c"># ďalší výskyt</span>
+.                  <span class="c"># zopakuj zmenu – alebo znova n, ak tento chceš preskočiť</span>
+n.n.nn.            <span class="c"># …a tak ďalej</span>
+
+<span class="c"># Pridať bodkočiarku na koniec viacerých riadkov:</span>
+A;&lt;Esc&gt;            <span class="c"># na prvom riadku</span>
+j.j.j.             <span class="c"># na ďalších</span></code></pre>
+  <p>Trvalá história zmien aj po zatvorení súboru – pozri <code>undofile</code> v časti <a href="#vimrc">.vimrc</a>.</p>
+  </section>
+
+  <!-- ===== Registre ===== -->
+  <section class="box t1">
+  <h2 id="registre">Kopírovanie, vkladanie a registre</h2>
+  <div class="tw">
+  <table>
+    <tr><th>Kláves</th><th>Čo robí</th></tr>
+    <tr><td><kbd>y</kbd><kbd>y</kbd> / <kbd>Y</kbd></td><td>skopíruje riadok</td></tr>
+    <tr><td><kbd>y</kbd><kbd>i</kbd><kbd>w</kbd></td><td>skopíruje slovo</td></tr>
+    <tr><td><kbd>p</kbd></td><td>vloží za kurzor (pri celých riadkoch pod aktuálny riadok)</td></tr>
+    <tr><td><kbd>P</kbd></td><td>vloží pred kurzor (nad riadok)</td></tr>
+    <tr><td><kbd>g</kbd><kbd>p</kbd> / <kbd>g</kbd><kbd>P</kbd></td><td>ako <kbd>p</kbd>/<kbd>P</kbd>, ale kurzor skončí za vloženým textom</td></tr>
+    <tr><td><kbd>]</kbd><kbd>p</kbd></td><td>vloží a prispôsobí odsadenie aktuálnemu riadku</td></tr>
+    <tr><td><kbd>3</kbd><kbd>p</kbd></td><td>vloží 3-krát</td></tr>
+  </table>
+  </div>
+
+  <h3>Registre – viac schránok naraz</h3>
+  <p>Vim má namiesto jednej schránky veľa <strong>registrov</strong>. Register vyberieš úvodzovkou pred príkazom: <kbd>"</kbd><kbd>a</kbd><kbd>y</kbd><kbd>y</kbd> = skopíruj riadok do registra <code>a</code>, <kbd>"</kbd><kbd>a</kbd><kbd>p</kbd> = vlož z registra <code>a</code>.</p>
+  <div class="tw">
+  <table>
+    <tr><th>Register</th><th>Obsah</th></tr>
+    <tr><td><code>""</code></td><td>predvolený – posledné kopírovanie <em>alebo</em> mazanie</td></tr>
+    <tr><td><code>"0</code></td><td><strong>posledné kopírovanie</strong> (mazanie ho neprepíše)</td></tr>
+    <tr><td><code>"1</code> … <code>"9</code></td><td>história mazaní celých riadkov (1 = najnovšie)</td></tr>
+    <tr><td><code>"-</code></td><td>posledné mazanie v rámci riadku</td></tr>
+    <tr><td><code>"a</code> … <code>"z</code></td><td>tvoje pomenované registre; <code>"A</code> (veľké) <strong>pridáva</strong> na koniec namiesto prepísania</td></tr>
+    <tr><td><code>"+</code></td><td><strong>systémová schránka</strong> (Ctrl+C / Ctrl+V v iných programoch)</td></tr>
+    <tr><td><code>"*</code></td><td>výber myšou v Linuxe (vkladá sa stredným tlačidlom); vo Windows to isté ako <code>"+</code></td></tr>
+    <tr><td><code>"_</code></td><td>„čierna diera“ – zmaže bez uloženia kamkoľvek</td></tr>
+    <tr><td><code>".</code></td><td>naposledy vložený text</td></tr>
+    <tr><td><code>"%</code></td><td>meno aktuálneho súboru</td></tr>
+    <tr><td><code>":</code></td><td>posledný príkaz z príkazového riadku</td></tr>
+    <tr><td><code>"/</code></td><td>posledné hľadanie</td></tr>
+  </table>
+  </div>
+  <p>Obsah registrov zobrazíš <code>:registers</code> (alebo <code>:reg a b +</code> pre konkrétne).</p>
+
+  <div class="cols">
+    <div>
+      <h3>Systémová schránka</h3>
+<pre><code>"+yy        <span class="c"># skopíruj riadok do schránky systému</span>
+"+yiw       <span class="c"># skopíruj slovo do schránky</span>
+"+p         <span class="c"># vlož zo schránky</span>
+gg"+yG      <span class="c"># skopíruj celý súbor do schránky</span>
+:%y+        <span class="c"># to isté príkazom</span></code></pre>
+      <p>Ak chceš, aby <kbd>y</kbd> a <kbd>p</kbd> rovno používali systémovú schránku, daj do <code>.vimrc</code>: <code>set clipboard=unnamedplus</code>.</p>
+      <p>Bez podpory schránky (<code>-clipboard</code>) vlož text cez terminál (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>v</kbd>) – predtým <code>:set paste</code>, aby sa neposunulo odsadenie.</p>
+    </div>
+    <div>
+      <h3>Častý problém: „p vloží nesprávny text“</h3>
+      <p>Skopíruješ slovo (<kbd>y</kbd><kbd>i</kbd><kbd>w</kbd>), potom zmažeš iné, ktoré chceš nahradiť (<kbd>d</kbd><kbd>i</kbd><kbd>w</kbd>) a <kbd>p</kbd> vloží to zmazané. Riešenia:</p>
+<pre><code>"0p         <span class="c"># vlož posledné KOPÍROVANIE</span>
+"_diwP      <span class="c"># zmaž do čiernej diery, potom vlož</span>
+viwp        <span class="c"># označ slovo a prepíš ho vloženým</span></code></pre>
+    </div>
+  </div>
+  </section>
+
+  <!-- ===== Vizuálny ===== -->
+  <section class="box t3">
+  <h2 id="vizualny">Vizuálny režim</h2>
+  <p>Keď chceš najprv vidieť, čo upravuješ. Označíš text pohybmi a potom použiješ operátor – <strong>bez</strong> pohybu (ten už je daný výberom).</p>
+  <div class="grid3">
+    <div class="card">
+      <h3><kbd>v</kbd> – po znakoch</h3>
+      <p>Bežný výber ako myšou.</p>
+    </div>
+    <div class="card">
+      <h3><kbd>V</kbd> – po riadkoch</h3>
+      <p>Vždy celé riadky.</p>
+    </div>
+    <div class="card">
+      <h3><kbd>Ctrl</kbd>+<kbd>v</kbd> – blok</h3>
+      <p>Obdĺžnik / stĺpec cez viac riadkov.</p>
+    </div>
+  </div>
+  <div class="tw">
+  <table>
+    <tr><th>Vo výbere</th><th>Čo robí</th></tr>
+    <tr><td><kbd>d</kbd> <kbd>x</kbd> / <kbd>y</kbd> / <kbd>c</kbd></td><td>zmazať / kopírovať / zmeniť výber</td></tr>
+    <tr><td><kbd>&gt;</kbd> <kbd>&lt;</kbd> <kbd>=</kbd></td><td>odsadiť / zrušiť odsadenie / auto-odsadiť (<kbd>3</kbd><kbd>&gt;</kbd> = trikrát)</td></tr>
+    <tr><td><kbd>U</kbd> <kbd>u</kbd> <kbd>~</kbd></td><td>VEĽKÉ / malé / prepnúť</td></tr>
+    <tr><td><kbd>J</kbd></td><td>spojiť riadky výberu do jedného</td></tr>
+    <tr><td><kbd>o</kbd></td><td>skočiť na druhý koniec výberu (a rozširovať odtiaľ)</td></tr>
+    <tr><td><kbd>i</kbd><kbd>w</kbd>, <kbd>a</kbd><kbd>p</kbd>, <kbd>i</kbd><kbd>"</kbd>…</td><td>rozšíriť výber o textový objekt (opakovane rozširuje)</td></tr>
+    <tr><td><kbd>p</kbd></td><td>nahradiť výber obsahom registra</td></tr>
+    <tr><td><kbd>:</kbd></td><td>príkaz len na označené riadky – Vim doplní <code>:'&lt;,'&gt;</code></td></tr>
+    <tr><td><kbd>g</kbd><kbd>v</kbd></td><td>(z normálneho režimu) obnoví posledný výber</td></tr>
+    <tr><td><kbd>g</kbd><kbd>Ctrl</kbd>+<kbd>a</kbd></td><td>vytvorí rastúcu postupnosť čísel (0,0,0 → 1,2,3)</td></tr>
+  </table>
+  </div>
+
+  <h3>Blokový výber – úprava viacerých riadkov naraz</h3>
+<pre><code><span class="c"># Zakomentovať 5 riadkov (pridať // na začiatok):</span>
+Ctrl+v  4j  I  //  Esc      <span class="c"># text sa po Esc objaví vo všetkých riadkoch</span>
+
+<span class="c"># Odkomentovať (zmazať prvé 3 znaky v 5 riadkoch):</span>
+Ctrl+v  4j  2l  d
+
+<span class="c"># Pridať text na koniec rôzne dlhých riadkov:</span>
+Ctrl+v  4j  $  A  ;  Esc
+
+<span class="c"># Prepísať stĺpec rovnakým textom:</span>
+Ctrl+v  4j  e  c  novy  Esc</code></pre>
+  <div class="note">
+    Pri bloku <kbd>I</kbd> píše pred blok, <kbd>A</kbd> za blok. Text sa vo všetkých riadkoch zobrazí až po stlačení <kbd>Esc</kbd> – dovtedy vidíš zmenu len v prvom riadku.
+  </div>
+  </section>
+
+  <!-- ===== Hľadanie ===== -->
+  <section class="box t0">
+  <h2 id="hladanie">Hľadanie</h2>
+  <div class="tw">
+  <table>
+    <tr><th>Kláves</th><th>Čo robí</th></tr>
+    <tr><td><kbd>/</kbd><code>text</code><kbd>Enter</kbd></td><td>hľadá dopredu</td></tr>
+    <tr><td><kbd>?</kbd><code>text</code><kbd>Enter</kbd></td><td>hľadá dozadu</td></tr>
+    <tr><td><kbd>n</kbd> / <kbd>N</kbd></td><td>ďalší / predchádzajúci výsledok (v smere hľadania)</td></tr>
+    <tr><td><kbd>*</kbd> / <kbd>#</kbd></td><td>hľadá celé slovo pod kurzorom dopredu / dozadu</td></tr>
+    <tr><td><kbd>g</kbd><kbd>*</kbd> / <kbd>g</kbd><kbd>#</kbd></td><td>to isté, ale aj ako časť iných slov</td></tr>
+    <tr><td><kbd>/</kbd> potom <kbd>↑</kbd> <kbd>↓</kbd></td><td>listovanie históriou hľadaní</td></tr>
+    <tr><td><kbd>/</kbd><kbd>Enter</kbd></td><td>zopakuje posledné hľadanie</td></tr>
+    <tr><td><code>:noh</code></td><td>vypne zvýraznenie výsledkov (do ďalšieho hľadania)</td></tr>
+    <tr><td><kbd>g</kbd><kbd>d</kbd></td><td>skok na definíciu premennej (lokálne)</td></tr>
+    <tr><td><kbd>g</kbd><kbd>f</kbd></td><td>otvorí súbor, ktorého cesta je pod kurzorom</td></tr>
+    <tr><td><kbd>g</kbd><kbd>x</kbd></td><td>otvorí URL alebo súbor pod kurzorom v predvolenom programe</td></tr>
+  </table>
+  </div>
+
+  <h3>Užitočné nastavenia</h3>
+<pre><code>:set hlsearch      <span class="c"># zvýrazniť všetky výsledky</span>
+:set incsearch     <span class="c"># ukazovať výsledok už počas písania</span>
+:set ignorecase    <span class="c"># nerozlišovať veľké/malé…</span>
+:set smartcase     <span class="c"># …ale rozlišovať, ak napíšem veľké písmeno</span></code></pre>
+
+  <h3>Regulárne výrazy</h3>
+  <p>Vim používa vlastnú syntax, v ktorej veľa špeciálnych znakov treba „odescapovať“ spätnou lomkou. Prefix <code>\v</code> (<em>very magic</em>) zapne syntax podobnú bežným regexom, <code>\c</code> vypne rozlišovanie veľkosti.</p>
+  <div class="tw">
+  <table>
+    <tr><th>Vzor</th><th>Nájde</th></tr>
+    <tr><td><code>/^#</code></td><td>riadky začínajúce <code>#</code></td></tr>
+    <tr><td><code>/;$</code></td><td>riadky končiace bodkočiarkou</td></tr>
+    <tr><td><code>/\&lt;ako\&gt;</code></td><td>celé slovo „ako“ (nie „takom“)</td></tr>
+    <tr><td><code>/\d\+</code></td><td>číslo (jedna a viac číslic)</td></tr>
+    <tr><td><code>/\v\d{3}-\d{4}</code></td><td>s very magic: 3 číslice, pomlčka, 4 číslice</td></tr>
+    <tr><td><code>/\v(chyba|error)</code></td><td>jedno alebo druhé slovo</td></tr>
+    <tr><td><code>/\s\+$</code></td><td>medzery na konci riadku</td></tr>
+    <tr><td><code>/^\s*$</code></td><td>prázdne riadky (aj s medzerami)</td></tr>
+    <tr><td><code>/\cchyba</code></td><td>„chyba“, „Chyba“, „CHYBA“…</td></tr>
+    <tr><td><code>/a.*b</code></td><td>od „a“ po posledné „b“ v riadku (lačné)</td></tr>
+    <tr><td><code>/a.\{-}b</code></td><td>od „a“ po najbližšie „b“ (nelačné)</td></tr>
+    <tr><td><code>/\%&gt;80v.\+</code></td><td>text za 80. stĺpcom</td></tr>
+  </table>
+  </div>
+  <p>Hľadanie vo viacerých súboroch: <code>:vimgrep /vzor/ **/*.html</code>, potom <code>:copen</code> zobrazí zoznam výsledkov, <code>:cn</code> / <code>:cp</code> ďalší / predchádzajúci. Rýchlejšie je <code>:grep vzor -r .</code> (používa systémový grep).</p>
+  </section>
+
+  <!-- ===== Nahrádzanie ===== -->
+  <section class="box t2">
+  <h2 id="nahradzanie">Nahrádzanie</h2>
+  <div class="formula"><code>:[rozsah]s/<b>čo</b>/<b>čím</b>/[príznaky]</code></div>
+<pre><code>:s/stare/nove/          <span class="c"># prvý výskyt v aktuálnom riadku</span>
+:s/stare/nove/g         <span class="c"># všetky výskyty v riadku</span>
+:%s/stare/nove/g        <span class="c"># v celom súbore</span>
+:%s/stare/nove/gc       <span class="c"># v celom súbore, každú zmenu potvrdiť</span>
+:%s/stare/nove/gi       <span class="c"># bez ohľadu na veľkosť písmen</span>
+:5,20s/stare/nove/g     <span class="c"># len riadky 5 až 20</span>
+:.,$s/stare/nove/g      <span class="c"># od aktuálneho riadku po koniec</span>
+:.,+3s/stare/nove/g     <span class="c"># aktuálny a 3 nasledujúce</span>
+:'&lt;,'&gt;s/stare/nove/g    <span class="c"># v označenom výbere (po V a :)</span>
+:%s/\s\+$//e            <span class="c"># zmazať medzery na konci riadkov (e = bez chyby, ak nič nenájde)</span>
+:%s/\&lt;ja\&gt;/ty/g          <span class="c"># len celé slovo</span>
+:%s#/usr/local#/opt#g   <span class="c"># iný oddeľovač – netreba escapovať lomky</span>
+:%s//nove/g             <span class="c"># prázdny vzor = naposledy hľadaný (najprv * alebo /)</span></code></pre>
+
+  <p>Pri <code>c</code> (confirm) sa Vim pýta pri každom výskyte: <kbd>y</kbd> áno, <kbd>n</kbd> nie, <kbd>a</kbd> všetky zvyšné, <kbd>q</kbd> skončiť, <kbd>l</kbd> nahradiť tento a skončiť.</p>
+
+  <h3>Pokročilé nahrádzanie</h3>
+<pre><code><span class="c"># Skupiny: prehodiť "Priezvisko, Meno" na "Meno Priezvisko"</span>
+:%s/\v(\w+), (\w+)/\2 \1/
+
+<span class="c"># &amp; = celý nájdený text: obaliť každé číslo zátvorkami</span>
+:%s/\d\+/(&amp;)/g
+
+<span class="c"># Zmena veľkosti: \u prvé písmeno veľké, \U všetko veľké (do \E)</span>
+:%s/\v&lt;(\w)(\w*)&gt;/\u\1\L\2/g     <span class="c"># Každé Slovo S Veľkým Písmenom</span>
+
+<span class="c"># Nový riadok v náhrade sa píše \r (nie \n)</span>
+:%s/, /,\r/g                   <span class="c"># každá položka na nový riadok</span>
+
+<span class="c"># Výraz: \= vyhodnotí kód – očíslovať riadky</span>
+:%s/^/\=line('.') . '. '/</code></pre>
+
+  <h3>Príkaz <code>:g</code> – urob niečo s každým riadkom, ktorý obsahuje vzor</h3>
+<pre><code>:g/DEBUG/d           <span class="c"># zmazať riadky obsahujúce DEBUG</span>
+:g!/dôležité/d       <span class="c"># zmazať riadky, ktoré NEobsahujú „dôležité“ (= :v/…/d)</span>
+:g/^\s*$/d           <span class="c"># zmazať prázdne riadky</span>
+:g/TODO/t$           <span class="c"># skopírovať riadky s TODO na koniec súboru</span>
+:g/TODO/m0           <span class="c"># presunúť ich na začiatok</span>
+:g/^/m0              <span class="c"># otočiť poradie riadkov</span>
+:g/funkcia/normal A; <span class="c"># na každý nájdený riadok vykonať príkaz normálneho režimu</span>
+:g/chyba/            <span class="c"># len vypísať nájdené riadky</span></code></pre>
+
+  <h3>Nahradenie vo viacerých súboroch</h3>
+<pre><code>:args **/*.html                    <span class="c"># zoznam súborov</span>
+:argdo %s/stare/nove/ge | update   <span class="c"># nahraď a ulož zmenené</span>
+
+<span class="c"># alebo cez výsledky hľadania (quickfix):</span>
+:vimgrep /stare/ **/*.js
+:cdo s/stare/nove/g | update</code></pre>
+  </section>
+
+  <!-- ===== Súbory a buffre ===== -->
+  <section class="box t4">
+  <h2 id="subory">Súbory a buffre</h2>
+  <p><strong>Buffer</strong> = súbor načítaný v pamäti. Môžeš ich mať otvorených veľa, aj keď je na obrazovke len jeden.</p>
+  <div class="cols">
+    <div>
+      <h3>Súbory</h3>
+      <table>
+        <tr><td><code>:e subor.txt</code></td><td>otvoriť súbor (<kbd>Tab</kbd> dopĺňa názov)</td></tr>
+        <tr><td><code>:e .</code></td><td>prehliadač adresára (netrw)</td></tr>
+        <tr><td><code>:Explore</code> / <code>:Ex</code></td><td>prehliadač adresára aktuálneho súboru</td></tr>
+        <tr><td><code>:Vex</code> / <code>:Sex</code></td><td>prehliadač v novom okne vedľa / pod</td></tr>
+        <tr><td><code>:find nazov</code></td><td>nájsť súbor podľa <code>path</code> (s <code>set path+=**</code> rekurzívne)</td></tr>
+        <tr><td><code>:r subor.txt</code></td><td>vložiť obsah súboru pod kurzor</td></tr>
+        <tr><td><code>:pwd</code> / <code>:cd cesta</code></td><td>aktuálny adresár / zmeniť</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>g</kbd></td><td>meno súboru, počet riadkov, pozícia</td></tr>
+        <tr><td><kbd>g</kbd> <kbd>Ctrl</kbd>+<kbd>g</kbd></td><td>počet slov, znakov, bajtov</td></tr>
+      </table>
+      <p>V netrw: <kbd>Enter</kbd> otvorí, <kbd>-</kbd> o adresár vyššie, <kbd>%</kbd> nový súbor, <kbd>d</kbd> nový adresár, <kbd>D</kbd> zmazať, <kbd>R</kbd> premenovať.</p>
+    </div>
+    <div>
+      <h3>Buffre</h3>
+      <table>
+        <tr><td><code>:ls</code></td><td>zoznam bufferov (<code>%</code> aktuálny, <code>#</code> predchádzajúci, <code>+</code> zmenený)</td></tr>
+        <tr><td><code>:b 3</code></td><td>prepnúť na buffer č. 3</td></tr>
+        <tr><td><code>:b nazov</code></td><td>prepnúť podľa časti mena (<kbd>Tab</kbd> dopĺňa)</td></tr>
+        <tr><td><code>:bn</code> / <code>:bp</code></td><td>ďalší / predchádzajúci buffer</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>^</kbd></td><td>prepínanie medzi dvoma poslednými súbormi</td></tr>
+        <tr><td><code>:bd</code></td><td>zavrieť buffer</td></tr>
+        <tr><td><code>:bufdo príkaz</code></td><td>vykonať príkaz vo všetkých bufferoch</td></tr>
+      </table>
+      <div class="note">
+        Ak Vim nedovolí prepnúť buffer kvôli neuloženým zmenám (<code>E37</code>), daj do <code>.vimrc</code> <code>set hidden</code> – zmeny ostanú v pamäti a pri <code>:q</code> ťa Vim upozorní.
+      </div>
+    </div>
+  </div>
+  </section>
+
+  <!-- ===== Okná a karty ===== -->
+  <section class="box t1">
+  <h2 id="okna">Okná (splits) a karty (tabs)</h2>
+  <p><strong>Okno</strong> je pohľad na buffer – jeden súbor môžeš mať aj v dvoch oknách. <strong>Karta</strong> je rozloženie okien (nie jeden súbor ako v prehliadači).</p>
+  <div class="cols">
+    <div>
+      <h3>Okná</h3>
+      <table>
+        <tr><td><code>:sp [subor]</code> / <kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>s</kbd></td><td>rozdeliť vodorovne (pod seba)</td></tr>
+        <tr><td><code>:vs [subor]</code> / <kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>v</kbd></td><td>rozdeliť zvisle (vedľa seba)</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></td><td>presun do okna vľavo / dole / hore / vpravo</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>w</kbd></td><td>ďalšie okno dookola</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>q</kbd> / <kbd>c</kbd></td><td>zavrieť okno</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>o</kbd> / <code>:only</code></td><td>nechať len aktuálne okno</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>=</kbd></td><td>všetky okná rovnako veľké</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>+</kbd> / <kbd>-</kbd></td><td>vyššie / nižšie (<kbd>1</kbd><kbd>0</kbd><kbd>Ctrl</kbd>+<kbd>w</kbd><kbd>+</kbd>)</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>&gt;</kbd> / <kbd>&lt;</kbd></td><td>širšie / užšie</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>_</kbd> / <kbd>|</kbd></td><td>maximalizovať výšku / šírku</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>H</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></td><td>presunúť okno k okraju</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>r</kbd></td><td>vymeniť okná</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>T</kbd></td><td>presunúť okno do novej karty</td></tr>
+        <tr><td><code>:term</code></td><td>terminál v okne (<code>:vert term</code> vedľa)</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Karty</h3>
+      <table>
+        <tr><td><code>:tabnew [subor]</code></td><td>nová karta</td></tr>
+        <tr><td><code>:tabe subor</code></td><td>otvoriť súbor v novej karte</td></tr>
+        <tr><td><kbd>g</kbd><kbd>t</kbd> / <kbd>g</kbd><kbd>T</kbd></td><td>ďalšia / predchádzajúca karta</td></tr>
+        <tr><td><kbd>3</kbd><kbd>g</kbd><kbd>t</kbd></td><td>karta č. 3</td></tr>
+        <tr><td><code>:tabc</code></td><td>zavrieť kartu</td></tr>
+        <tr><td><code>:tabo</code></td><td>zavrieť všetky ostatné karty</td></tr>
+        <tr><td><code>:tabm 0</code></td><td>presunúť kartu na začiatok</td></tr>
+        <tr><td><code>:tabdo príkaz</code></td><td>príkaz vo všetkých kartách</td></tr>
+      </table>
+      <h3>Porovnávanie (diff)</h3>
+      <table>
+        <tr><td><code>vim -d a b</code></td><td>otvoriť dva súbory v porovnaní</td></tr>
+        <tr><td><kbd>]</kbd><kbd>c</kbd> / <kbd>[</kbd><kbd>c</kbd></td><td>ďalší / predchádzajúci rozdiel</td></tr>
+        <tr><td><kbd>d</kbd><kbd>o</kbd></td><td>prevziať zmenu z druhého okna (<em>diff obtain</em>)</td></tr>
+        <tr><td><kbd>d</kbd><kbd>p</kbd></td><td>poslať zmenu do druhého okna (<em>diff put</em>)</td></tr>
+        <tr><td><code>:diffthis</code> / <code>:diffoff</code></td><td>zapnúť / vypnúť porovnanie pre otvorené okná</td></tr>
+        <tr><td><code>:diffupdate</code></td><td>prepočítať rozdiely</td></tr>
+      </table>
+    </div>
+  </div>
+  </section>
+
+  <!-- ===== Značky ===== -->
+  <section class="box t3">
+  <h2 id="znacky">Značky a skoky</h2>
+  <div class="cols">
+    <div>
+      <h3>Vlastné značky</h3>
+      <table>
+        <tr><td><kbd>m</kbd><kbd>a</kbd></td><td>označiť pozíciu ako <code>a</code> (malé = v súbore)</td></tr>
+        <tr><td><kbd>m</kbd><kbd>A</kbd></td><td>veľké = globálna značka, skočí aj do iného súboru</td></tr>
+        <tr><td><kbd>`</kbd><kbd>a</kbd></td><td>skok presne na značku (riadok aj stĺpec)</td></tr>
+        <tr><td><kbd>'</kbd><kbd>a</kbd></td><td>skok na začiatok riadku so značkou</td></tr>
+        <tr><td><kbd>d</kbd><kbd>'</kbd><kbd>a</kbd></td><td>zmazať od aktuálneho riadku po značku</td></tr>
+        <tr><td><code>:marks</code></td><td>zoznam značiek</td></tr>
+        <tr><td><code>:delm a</code> / <code>:delm!</code></td><td>zmazať značku / všetky malé</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Automatické značky a skoky</h3>
+      <table>
+        <tr><td><kbd>`</kbd><kbd>`</kbd></td><td>späť na miesto pred posledným skokom</td></tr>
+        <tr><td><kbd>`</kbd><kbd>.</kbd></td><td>na miesto poslednej zmeny</td></tr>
+        <tr><td><kbd>g</kbd><kbd>;</kbd> / <kbd>g</kbd><kbd>,</kbd></td><td>dozadu / dopredu po histórii zmien</td></tr>
+        <tr><td><kbd>`</kbd><kbd>"</kbd></td><td>kde bol kurzor pri zatvorení súboru</td></tr>
+        <tr><td><kbd>`</kbd><kbd>[</kbd> <kbd>`</kbd><kbd>]</kbd></td><td>začiatok / koniec naposledy vloženého textu</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>o</kbd></td><td>späť v histórii skokov (aj medzi súbormi)</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>i</kbd> / <kbd>Tab</kbd></td><td>dopredu v histórii skokov</td></tr>
+        <tr><td><code>:jumps</code> / <code>:changes</code></td><td>zoznam skokov / zmien</td></tr>
+      </table>
+    </div>
+  </div>
+  <p><em>Skok</em> je väčší presun: <kbd>G</kbd>, <kbd>g</kbd><kbd>g</kbd>, <kbd>/</kbd>, <kbd>n</kbd>, <kbd>%</kbd>, <kbd>(</kbd>, <kbd>{</kbd>, <code>:42</code>… Pohyby <kbd>j</kbd>, <kbd>w</kbd> a podobne skoky nie sú.</p>
+  </section>
+
+  <!-- ===== Makrá ===== -->
+  <section class="box t5">
+  <h2 id="makra">Makrá</h2>
+  <p>Makro nahrá postupnosť kláves do registra a potom ju prehrá. Ideálne na opakujúce sa úpravy, ktoré sa nedajú urobiť jedným <code>:s</code>.</p>
+  <div class="tw">
+  <table>
+    <tr><th>Kláves</th><th>Čo robí</th></tr>
+    <tr><td><kbd>q</kbd><kbd>a</kbd></td><td>začne nahrávať do registra <code>a</code> (vľavo dole <code>recording @a</code>)</td></tr>
+    <tr><td><kbd>q</kbd></td><td>ukončí nahrávanie</td></tr>
+    <tr><td><kbd>@</kbd><kbd>a</kbd></td><td>prehrá makro <code>a</code></td></tr>
+    <tr><td><kbd>@</kbd><kbd>@</kbd></td><td>zopakuje naposledy prehraté makro</td></tr>
+    <tr><td><kbd>5</kbd><kbd>0</kbd><kbd>@</kbd><kbd>a</kbd></td><td>prehrá 50-krát (zastaví sa pri prvej chybe, napr. na konci súboru)</td></tr>
+    <tr><td><code>:5,20norm @a</code></td><td>prehrá makro na každom riadku 5–20</td></tr>
+    <tr><td><code>:'&lt;,'&gt;norm @a</code></td><td>na každom označenom riadku</td></tr>
+    <tr><td><kbd>q</kbd><kbd>A</kbd></td><td>pokračuje v nahrávaní – pridá na koniec makra <code>a</code></td></tr>
+  </table>
+  </div>
+
+  <h3>Príklad: CSV na HTML zoznam</h3>
+<pre><code><span class="c"># Vstup:                     Výstup:</span>
+<span class="c"># Jablko,5                   &lt;li&gt;Jablko – 5 ks&lt;/li&gt;</span>
+<span class="c"># Hruška,12                  &lt;li&gt;Hruška – 12 ks&lt;/li&gt;</span>
+
+qa            <span class="c"># začni nahrávať</span>
+0             <span class="c"># začiatok riadku (makro má fungovať odkiaľkoľvek)</span>
+i&lt;li&gt;&lt;Esc&gt;    <span class="c"># vlož začiatok tagu</span>
+f,            <span class="c"># na čiarku</span>
+s – &lt;Esc&gt;     <span class="c"># nahraď čiarku pomlčkou</span>
+A ks&lt;/li&gt;&lt;Esc&gt;  <span class="c"># koniec riadku</span>
+j             <span class="c"># posuň sa na ďalší riadok – pripravené na opakovanie</span>
+q             <span class="c"># koniec nahrávania</span>
+100@a         <span class="c"># zvyšné riadky</span></code></pre>
+
+  <div class="note">
+    <strong>Tipy pre spoľahlivé makrá:</strong> začni pohybom na známe miesto (<kbd>0</kbd>, <kbd>^</kbd>), používaj pohyby podľa obsahu (<kbd>f</kbd>, <kbd>w</kbd>, <kbd>/</kbd>) namiesto <kbd>l</kbd><kbd>l</kbd><kbd>l</kbd>, a na konci sa posuň na ďalší riadok. Makro je obyčajný text v registri – <code>"ap</code> ho vloží do súboru, môžeš ho upraviť a <code>"ayy</code> uložiť späť (bez znaku konca riadku: <code>0"ay$</code>).
+  </div>
+  <p>Ak si omylom spustil nahrávanie (<code>recording @q</code> vľavo dole), stačí stlačiť <kbd>q</kbd>.</p>
+  </section>
+
+  <!-- ===== Príkazový riadok ===== -->
+  <section class="box t0">
+  <h2 id="prikazovy">Príkazový riadok, rozsahy a shell</h2>
+  <h3>Rozsahy riadkov</h3>
+  <div class="tw">
+  <table>
+    <tr><th>Rozsah</th><th>Znamená</th></tr>
+    <tr><td><code>:10</code></td><td>riadok 10</td></tr>
+    <tr><td><code>:10,20</code></td><td>riadky 10 až 20</td></tr>
+    <tr><td><code>:.</code> / <code>:$</code></td><td>aktuálny / posledný riadok</td></tr>
+    <tr><td><code>:%</code></td><td>celý súbor (= <code>1,$</code>)</td></tr>
+    <tr><td><code>:.,+5</code></td><td>aktuálny a 5 nasledujúcich</td></tr>
+    <tr><td><code>:'&lt;,'&gt;</code></td><td>vizuálny výber</td></tr>
+    <tr><td><code>:'a,'b</code></td><td>od značky a po značku b</td></tr>
+    <tr><td><code>:/zaciatok/,/koniec/</code></td><td>od riadku so vzorom po riadok so vzorom</td></tr>
+  </table>
+  </div>
+  <h3>Príkazy s rozsahom</h3>
+<pre><code>:10,20d           <span class="c"># zmazať riadky</span>
+:10,20y           <span class="c"># skopírovať riadky</span>
+:5t.              <span class="c"># skopírovať riadok 5 pod aktuálny (t = copy)</span>
+:10,15m$          <span class="c"># presunúť riadky 10–15 na koniec (m = move)</span>
+:m-2              <span class="c"># presunúť aktuálny riadok o jeden vyššie</span>
+:%norm A;         <span class="c"># na koniec každého riadku pridať ;</span>
+:%norm I#         <span class="c"># zakomentovať všetky riadky (# na začiatok)</span>
+:sort             <span class="c"># zoradiť riadky</span>
+:sort u           <span class="c"># zoradiť a odstrániť duplicity</span>
+:sort n           <span class="c"># zoradiť číselne</span>
+:sort! i          <span class="c"># zostupne, bez ohľadu na veľkosť</span>
+:%j               <span class="c"># spojiť všetky riadky do jedného</span>
+:retab            <span class="c"># prepísať tabulátory podľa expandtab/tabstop</span></code></pre>
+
+  <h3>Externé príkazy</h3>
+<pre><code>:!ls -la              <span class="c"># spustiť príkaz a ukázať výstup</span>
+:!python3 %           <span class="c"># spustiť aktuálny súbor (% = jeho meno)</span>
+:r !date              <span class="c"># vložiť výstup príkazu pod kurzor</span>
+:r !curl -s URL       <span class="c"># vložiť stiahnutý obsah</span>
+:%!sort -u            <span class="c"># prefiltrovať celý súbor cez príkaz</span>
+:%!python3 -m json.tool   <span class="c"># naformátovať JSON</span>
+:'&lt;,'&gt;!column -t      <span class="c"># zarovnať stĺpce vo výbere</span>
+!!sh                  <span class="c"># (normálny režim) nahradiť riadok výstupom jeho spustenia</span>
+:sh                   <span class="c"># dočasný shell, späť príkazom exit</span>
+Ctrl+z                <span class="c"># uspať Vim, späť príkazom fg</span></code></pre>
+
+  <h3>Vychytávky príkazového riadku</h3>
+  <div class="tw">
+  <table>
+    <tr><td><kbd>Tab</kbd></td><td>dopĺňanie príkazov, súborov aj nastavení</td></tr>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>história (filtruje podľa začatého textu)</td></tr>
+    <tr><td><kbd>q</kbd><kbd>:</kbd></td><td>okno s históriou príkazov – dá sa v ňom upravovať, <kbd>Enter</kbd> spustí</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>r</kbd> <kbd>Ctrl</kbd>+<kbd>w</kbd></td><td>vloží slovo pod kurzorom do príkazu</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>r</kbd> <kbd>"</kbd></td><td>vloží predvolený register</td></tr>
+    <tr><td><kbd>@</kbd><kbd>:</kbd></td><td>zopakuje posledný príkaz <code>:</code> (potom <kbd>@</kbd><kbd>@</kbd>)</td></tr>
+    <tr><td><kbd>&amp;</kbd></td><td>zopakuje posledné <code>:s</code> na aktuálnom riadku (<kbd>g</kbd><kbd>&amp;</kbd> na celom súbore)</td></tr>
+  </table>
+  </div>
+  </section>
+
+  <!-- ===== Ďalšie ===== -->
+  <section class="box t4">
+  <h2 id="dalsie">Skladanie, doplňovanie, pravopis a kódovanie</h2>
+  <div class="cols">
+    <div>
+      <h3>Skladanie (folding)</h3>
+      <table>
+        <tr><td><kbd>z</kbd><kbd>f</kbd>{pohyb}</td><td>vytvoriť záhyb (napr. <kbd>z</kbd><kbd>f</kbd><kbd>a</kbd><kbd>p</kbd>)</td></tr>
+        <tr><td><kbd>z</kbd><kbd>a</kbd></td><td>prepnúť otvorený / zatvorený</td></tr>
+        <tr><td><kbd>z</kbd><kbd>o</kbd> / <kbd>z</kbd><kbd>c</kbd></td><td>otvoriť / zatvoriť</td></tr>
+        <tr><td><kbd>z</kbd><kbd>R</kbd> / <kbd>z</kbd><kbd>M</kbd></td><td>otvoriť / zatvoriť všetky</td></tr>
+        <tr><td><kbd>z</kbd><kbd>d</kbd> / <kbd>z</kbd><kbd>E</kbd></td><td>zrušiť záhyb / všetky</td></tr>
+        <tr><td><kbd>z</kbd><kbd>j</kbd> / <kbd>z</kbd><kbd>k</kbd></td><td>na ďalší / predchádzajúci záhyb</td></tr>
+      </table>
+      <p>Automatické skladanie: <code>:set foldmethod=indent</code> (podľa odsadenia), <code>syntax</code> (podľa jazyka), <code>marker</code> (podľa <code>{{{ }}}</code>).</p>
+
+      <h3>Doplňovanie (vkladací režim)</h3>
+      <table>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>n</kbd> / <kbd>Ctrl</kbd>+<kbd>p</kbd></td><td>slová z otvorených bufferov</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>x</kbd> <kbd>Ctrl</kbd>+<kbd>f</kbd></td><td>cesty k súborom</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>x</kbd> <kbd>Ctrl</kbd>+<kbd>l</kbd></td><td>celé riadky</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>x</kbd> <kbd>Ctrl</kbd>+<kbd>o</kbd></td><td>podľa jazyka (omni) – HTML, CSS…</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>x</kbd> <kbd>s</kbd></td><td>opravy pravopisu</td></tr>
+      </table>
+      <p>V ponuke: <kbd>Ctrl</kbd>+<kbd>n</kbd>/<kbd>p</kbd> pohyb, <kbd>Ctrl</kbd>+<kbd>y</kbd> potvrdiť, <kbd>Ctrl</kbd>+<kbd>e</kbd> zrušiť.</p>
+    </div>
+    <div>
+      <h3>Kontrola pravopisu</h3>
+<pre><code>:setlocal spell spelllang=sk   <span class="c"># zapnúť (slovník sa stiahne sám)</span>
+:setlocal spell spelllang=sk,en
+:set nospell                   <span class="c"># vypnúť</span></code></pre>
+      <table>
+        <tr><td><kbd>]</kbd><kbd>s</kbd> / <kbd>[</kbd><kbd>s</kbd></td><td>ďalšia / predchádzajúca chyba</td></tr>
+        <tr><td><kbd>z</kbd><kbd>=</kbd></td><td>návrhy opráv</td></tr>
+        <tr><td><kbd>z</kbd><kbd>g</kbd></td><td>pridať slovo do slovníka</td></tr>
+        <tr><td><kbd>z</kbd><kbd>w</kbd></td><td>označiť slovo ako chybné</td></tr>
+      </table>
+
+      <h3>Kódovanie a konce riadkov</h3>
+<pre><code>:set fileencoding?          <span class="c"># zistiť kódovanie</span>
+:set fileencoding=utf-8     <span class="c"># zmeniť a potom :w</span>
+:e ++enc=cp1250             <span class="c"># znova načítať ako Windows-1250</span>
+:set fileformat?            <span class="c"># unix (LF) / dos (CRLF)</span>
+:set fileformat=unix        <span class="c"># prekonvertovať a :w</span>
+:%s/\r$//                   <span class="c"># zmazať ^M na koncoch riadkov</span>
+:set list                   <span class="c"># ukázať taby, medzery na konci, konce riadkov</span>
+ga                          <span class="c"># kód znaku pod kurzorom</span></code></pre>
+
+      <h3>Rôzne</h3>
+      <table>
+        <tr><td><code>:set nu</code> / <code>:set nonu</code></td><td>zapnúť / vypnúť čísla riadkov</td></tr>
+        <tr><td><code>:set nu!</code></td><td>prepnúť (výkričník prepína)</td></tr>
+        <tr><td><code>:set wrap?</code></td><td>zistiť hodnotu nastavenia</td></tr>
+        <tr><td><code>:set tabstop&amp;</code></td><td>vrátiť predvolenú hodnotu</td></tr>
+        <tr><td><code>:syntax on</code></td><td>farebné zvýraznenie syntaxe</td></tr>
+        <tr><td><code>:colorscheme </code><kbd>Tab</kbd></td><td>vyskúšať farebné schémy</td></tr>
+        <tr><td><code>:set ft=json</code></td><td>nastaviť typ súboru (zvýrazňovanie)</td></tr>
+        <tr><td><code>:TOhtml</code></td><td>vyexportovať súbor so zvýraznením do HTML</td></tr>
+      </table>
+    </div>
+  </div>
+  </section>
+
+  <!-- ===== vimrc ===== -->
+  <section class="box t1">
+  <h2 id="vimrc">Konfigurácia <code>.vimrc</code></h2>
+  <p>Nastavenia napísané počas práce (<code>:set …</code>) platia len do zatvorenia. Trvalé nastavenia patria do súboru <code>~/.vimrc</code> (Linux, Git Bash) alebo <code>%USERPROFILE%\_vimrc</code> (Windows). Otvoríš ho zo samotného Vimu príkazom <code>:e $MYVIMRC</code> a po úprave načítaš <code>:source $MYVIMRC</code> (alebo <code>:so %</code>).</p>
+  <p>Rozumný základ s komentármi – skopíruj a uprav podľa seba:</p>
+<pre><code>" ~/.vimrc – komentár začína úvodzovkou
+
+" ----- Základ -----
+set nocompatible            " plný Vim, nie režim kompatibility so starým vi
+filetype plugin indent on   " rozpoznávanie typu súboru, pluginy a odsadenie podľa jazyka
+syntax on                   " farebné zvýraznenie
+set encoding=utf-8
+set hidden                  " prepínanie bufferov bez nutnosti ukladať
+set backspace=indent,eol,start  " Backspace maže všetko
+set mouse=a                 " myš (klikanie, označovanie, posúvanie)
+set clipboard=unnamedplus   " y a p používajú systémovú schránku (treba +clipboard)
+set history=1000
+set updatetime=300
+
+" ----- Vzhľad -----
+set number                  " čísla riadkov
+set relativenumber          " relatívne čísla (aktuálny ukáže skutočné)
+set cursorline              " zvýrazniť riadok s kurzorom
+set showcmd                 " ukázať rozpísaný príkaz vpravo dole
+set showmatch               " bliknúť párovú zátvorku
+set laststatus=2            " stavový riadok vždy
+set ruler                   " pozícia kurzora
+set scrolloff=5             " nechať 5 riadkov nad/pod kurzorom
+set wildmenu                " ponuka pri dopĺňaní príkazov Tabom
+set wildmode=longest:full,full
+set linebreak               " zalamovať po slovách
+set signcolumn=auto
+set termguicolors           " 24-bitové farby (ak ich terminál zvládne)
+colorscheme habamax         " zabudovaná schéma (Vim 9); iné: desert, slate, retrobox
+
+" ----- Odsadenie -----
+set expandtab               " Tab vkladá medzery
+set tabstop=4               " šírka tabulátora
+set shiftwidth=4            " o koľko odsadzuje &gt;&gt;
+set softtabstop=4           " Backspace maže 4 medzery naraz
+set autoindent
+set smartindent
+
+" ----- Hľadanie -----
+set hlsearch
+set incsearch
+set ignorecase
+set smartcase
+
+" ----- Súbory -----
+set autoread                " načítať súbor, ak sa zmenil mimo Vimu
+set undofile                " história zmien prežije zatvorenie súboru
+set undodir=~/.vim/undo//
+set directory=~/.vim/swap//
+set backupdir=~/.vim/backup//
+set path+=**                " :find hľadá aj v podadresároch
+
+" ----- Vlastné klávesové skratky -----
+let mapleader = " "         " vodiaci kláves = medzerník
+
+nnoremap &lt;leader&gt;w :w&lt;CR&gt;
+nnoremap &lt;leader&gt;q :q&lt;CR&gt;
+nnoremap &lt;leader&gt;h :nohlsearch&lt;CR&gt;
+nnoremap &lt;leader&gt;e :Lexplore&lt;CR&gt;
+nnoremap &lt;leader&gt;v :e $MYVIMRC&lt;CR&gt;
+
+" pohyb medzi oknami bez Ctrl+w
+nnoremap &lt;C-h&gt; &lt;C-w&gt;h
+nnoremap &lt;C-j&gt; &lt;C-w&gt;j
+nnoremap &lt;C-k&gt; &lt;C-w&gt;k
+nnoremap &lt;C-l&gt; &lt;C-w&gt;l
+
+" presun označených riadkov hore/dole
+vnoremap J :m '&gt;+1&lt;CR&gt;gv=gv
+vnoremap K :m '&lt;-2&lt;CR&gt;gv=gv
+
+" po odsadení ostane výber
+vnoremap &lt; &lt;gv
+vnoremap &gt; &gt;gv
+
+" Y kopíruje po koniec riadku (ako D a C)
+nnoremap Y y$
+
+" jk vo vkladacom režime = Esc
+inoremap jk &lt;Esc&gt;
+
+" ----- Automatické akcie -----
+augroup moje
+  autocmd!
+  " vrátiť kurzor tam, kde bol pri zatvorení
+  autocmd BufReadPost * if line("'\"") &gt; 1 &amp;&amp; line("'\"") &lt;= line("$") | exe "normal! g`\"" | endif
+  " pre HTML, CSS, JS, YAML odsadenie 2 medzery
+  autocmd FileType html,css,javascript,yaml setlocal shiftwidth=2 softtabstop=2
+  " Makefile potrebuje skutočné tabulátory
+  autocmd FileType make setlocal noexpandtab
+  " zmazať medzery na konci riadkov pri ukladaní
+  autocmd BufWritePre * :%s/\s\+$//e
+augroup END</code></pre>
+  <p>Adresáre pre undo/swap/backup treba raz vytvoriť:</p>
+<pre><code>mkdir -p ~/.vim/undo ~/.vim/swap ~/.vim/backup</code></pre>
+
+  <h3>Mapovanie klávesov</h3>
+  <div class="tw">
+  <table>
+    <tr><th>Príkaz</th><th>Platí v režime</th></tr>
+    <tr><td><code>nnoremap</code></td><td>normálny</td></tr>
+    <tr><td><code>inoremap</code></td><td>vkladací</td></tr>
+    <tr><td><code>vnoremap</code> / <code>xnoremap</code></td><td>vizuálny</td></tr>
+    <tr><td><code>cnoremap</code></td><td>príkazový riadok</td></tr>
+    <tr><td><code>tnoremap</code></td><td>terminál (<code>:term</code>)</td></tr>
+    <tr><td><code>noremap</code></td><td>normálny + vizuálny + operátorový</td></tr>
+  </table>
+  </div>
+  <p>Vždy používaj verziu <strong>s <code>nore</code></strong> (non-recursive) – <code>map</code> bez nej by rekurzívne rozbaľoval iné mapovania. Kontrola, čo je na klávese namapované: <code>:verbose nmap &lt;leader&gt;w</code>. Zápis klávesov: <code>&lt;CR&gt;</code> Enter, <code>&lt;Esc&gt;</code>, <code>&lt;Space&gt;</code>, <code>&lt;Tab&gt;</code>, <code>&lt;C-x&gt;</code> Ctrl+x, <code>&lt;S-x&gt;</code> Shift, <code>&lt;A-x&gt;</code> / <code>&lt;M-x&gt;</code> Alt, <code>&lt;F5&gt;</code>.</p>
+  <p>Príklad: spustenie aktuálneho súboru klávesom F5 podľa jazyka:</p>
+<pre><code>autocmd FileType python nnoremap &lt;buffer&gt; &lt;F5&gt; :w&lt;CR&gt;:!python3 %&lt;CR&gt;
+autocmd FileType sh     nnoremap &lt;buffer&gt; &lt;F5&gt; :w&lt;CR&gt;:!bash %&lt;CR&gt;</code></pre>
+  </section>
+
+  <!-- ===== Pluginy ===== -->
+  <section class="box t3">
+  <h2 id="pluginy">Pluginy</h2>
+  <p>Vim zvládne veľa aj bez pluginov. Keď chceš viac, sú dve cesty.</p>
+  <div class="cols">
+    <div>
+      <h3>1. Zabudované balíčky (bez správcu)</h3>
+      <p>Od Vimu 8 sa plugin, ktorý dáš do <code>~/.vim/pack/*/start/</code>, načíta automaticky:</p>
+<pre><code>mkdir -p ~/.vim/pack/pluginy/start
+cd ~/.vim/pack/pluginy/start
+git clone https://github.com/tpope/vim-surround.git
+git clone https://github.com/tpope/vim-commentary.git
+<span class="c"># vygenerovať pomocníka pluginov (vo Vime)</span>
+vim -c 'helptags ALL' -c q</code></pre>
+      <p>Aktualizácia = <code>git pull</code> v adresári pluginu. Odstránenie = zmazať adresár. Pluginy v <code>opt/</code> namiesto <code>start/</code> sa načítajú až príkazom <code>:packadd nazov</code>.</p>
+      <p>Vim 9 má navyše pribalené voliteľné pluginy, napr. <code>:packadd comment</code> (komentovanie <kbd>g</kbd><kbd>c</kbd><kbd>c</kbd>) a <code>:packadd matchit</code> (<kbd>%</kbd> aj medzi HTML tagmi či if/endif).</p>
+    </div>
+    <div>
+      <h3>2. Správca vim-plug</h3>
+<pre><code>curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim</code></pre>
+      <p>Do <code>.vimrc</code>:</p>
+<pre><code>call plug#begin()
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-commentary'
+Plug 'junegunn/fzf', { 'do': { -&gt; fzf#install() } }
+Plug 'junegunn/fzf.vim'
+Plug 'airblade/vim-gitgutter'
+call plug#end()</code></pre>
+      <p>Potom vo Vime: <code>:PlugInstall</code> (inštalácia), <code>:PlugUpdate</code> (aktualizácia), <code>:PlugClean</code> (odstráni vymazané zo zoznamu).</p>
+    </div>
+  </div>
+
+  <h3>Obľúbené pluginy</h3>
+  <div class="tw">
+  <table>
+    <tr><th>Plugin</th><th>Na čo</th></tr>
+    <tr><td><code>tpope/vim-surround</code></td><td>úprava okolia: <kbd>c</kbd><kbd>s</kbd><kbd>"</kbd><kbd>'</kbd> zmení <code>"…"</code> na <code>'…'</code>, <kbd>d</kbd><kbd>s</kbd><kbd>(</kbd> zmaže zátvorky, <kbd>y</kbd><kbd>s</kbd><kbd>i</kbd><kbd>w</kbd><kbd>]</kbd> obalí slovo</td></tr>
+    <tr><td><code>tpope/vim-commentary</code></td><td><kbd>g</kbd><kbd>c</kbd><kbd>c</kbd> zakomentuje riadok, <kbd>g</kbd><kbd>c</kbd><kbd>a</kbd><kbd>p</kbd> odsek</td></tr>
+    <tr><td><code>tpope/vim-fugitive</code></td><td>git vo Vime: <code>:Git</code>, <code>:Git blame</code>, <code>:Gdiffsplit</code></td></tr>
+    <tr><td><code>junegunn/fzf.vim</code></td><td>rýchle hľadanie súborov (<code>:Files</code>), textu (<code>:Rg</code>), bufferov (<code>:Buffers</code>)</td></tr>
+    <tr><td><code>airblade/vim-gitgutter</code></td><td>vedľa čísel riadkov ukazuje zmeny oproti gitu</td></tr>
+    <tr><td><code>preservim/nerdtree</code></td><td>strom súborov v bočnom paneli</td></tr>
+    <tr><td><code>vim-airline/vim-airline</code></td><td>pekný stavový riadok</td></tr>
+    <tr><td><code>dense-analysis/ale</code></td><td>kontrola chýb (lint) a formátovanie počas písania</td></tr>
+    <tr><td><code>yegappan/lsp</code></td><td>LSP klient pre Vim 9 – doplňovanie, skok na definíciu, premenovanie</td></tr>
+  </table>
+  </div>
+  </section>
+
+  <!-- ===== Neovim ===== -->
+  <section class="box t4">
+  <h2 id="neovim">Neovim</h2>
+  <p><strong>Neovim</strong> (<code>nvim</code>) je moderná odnož Vimu. Všetko z tohto návodu v ňom funguje rovnako – líši sa hlavne konfiguráciou a ekosystémom pluginov.</p>
+  <div class="tw">
+  <table>
+    <tr><th></th><th>Vim</th><th>Neovim</th></tr>
+    <tr><td>Príkaz</td><td><code>vim</code></td><td><code>nvim</code></td></tr>
+    <tr><td>Konfigurácia</td><td><code>~/.vimrc</code> (Vimscript)</td><td><code>~/.config/nvim/init.lua</code> (Lua) alebo <code>init.vim</code></td></tr>
+    <tr><td>Windows</td><td><code>%USERPROFILE%\_vimrc</code></td><td><code>%LOCALAPPDATA%\nvim\init.lua</code></td></tr>
+    <tr><td>LSP (IDE funkcie)</td><td>cez plugin</td><td>zabudované</td></tr>
+    <tr><td>Predvolené nastavenia</td><td>konzervatívne</td><td>modernejšie (hlsearch, incsearch, mouse… už zapnuté)</td></tr>
+    <tr><td>Inštalácia</td><td><code>sudo apt install vim</code></td><td><code>sudo apt install neovim</code> / <code>winget install Neovim.Neovim</code></td></tr>
+  </table>
+  </div>
+  <p>Ak chceš v Neovime použiť existujúci <code>.vimrc</code>, stačí do <code>~/.config/nvim/init.vim</code> napísať:</p>
+<pre><code>set runtimepath^=~/.vim runtimepath+=~/.vim/after
+let &amp;packpath = &amp;runtimepath
+source ~/.vimrc</code></pre>
+  </section>
+
+  <!-- ===== Chyby ===== -->
+  <section class="box t5">
+  <h2 id="chyby">Riešenie problémov</h2>
+  <div class="tw">
+  <table>
+    <tr><th>Problém</th><th>Príčina a riešenie</th></tr>
+    <tr><td>Neviem, čo sa deje, klávesy robia čudné veci</td><td><kbd>Esc</kbd> <kbd>Esc</kbd>. Ak treba, <kbd>u</kbd> niekoľkokrát vráti zmeny. Pozri vľavo dole, v akom si režime.</td></tr>
+    <tr><td>Vim zamrzol, nereaguje na nič</td><td>Pravdepodobne si stlačil <kbd>Ctrl</kbd>+<kbd>s</kbd> – terminál zastavil výstup. Odblokuj <kbd>Ctrl</kbd>+<kbd>q</kbd>.</td></tr>
+    <tr><td>Vim zmizol, som v termináli</td><td><kbd>Ctrl</kbd>+<kbd>z</kbd> ho uspal. Vráť sa príkazom <code>fg</code>.</td></tr>
+    <tr><td>Vľavo dole <code>recording @q</code></td><td>Omylom si spustil nahrávanie makra. Stlač <kbd>q</kbd>.</td></tr>
+    <tr><td>Otvorilo sa malé okno s históriou príkazov</td><td>Stlačil si <kbd>q</kbd><kbd>:</kbd> namiesto <code>:q</code>. Zavri ho <code>:q</code> alebo <kbd>Ctrl</kbd>+<kbd>c</kbd>.</td></tr>
+    <tr><td>Písmená robia príkazy, všetko VEĽKÝMI</td><td>Zapnutý Caps Lock – v normálnom režime sú veľké písmená iné príkazy (<kbd>J</kbd>, <kbd>K</kbd>, <kbd>U</kbd>…). Vypni ho a vráť zmeny <kbd>u</kbd>.</td></tr>
+    <tr><td><code>E37: No write since last change</code></td><td>Neuložené zmeny. <code>:w</code> a potom znova, alebo <code>:q!</code> na zahodenie.</td></tr>
+    <tr><td><code>E45: 'readonly' option is set</code></td><td>Súbor je len na čítanie. Ak ho naozaj chceš prepísať, <code>:w!</code>.</td></tr>
+    <tr><td><code>E212: Can't open file for writing</code></td><td>Nemáš práva (systémový súbor) alebo adresár neexistuje. <code>:w !sudo tee % &gt; /dev/null</code>, potom <kbd>L</kbd> na načítanie. Nabudúce <code>sudoedit súbor</code>.</td></tr>
+    <tr><td><code>E325: ATTENTION</code> – Found a swap file</td><td>Súbor je otvorený inde, alebo Vim predtým spadol. Ak je otvorený inde, zvoľ <kbd>Q</kbd> a zavri ho tam. Po páde zvoľ <kbd>R</kbd> (Recover), skontroluj obsah, ulož a swap zmaž (<code>:!rm .subor.swp</code>, alebo pri ďalšom otvorení <kbd>D</kbd> Delete).</td></tr>
+    <tr><td>Vložený text sa „schodíkovito“ odsadzuje</td><td>Pri vkladaní cez terminál Vim myslí, že píšeš a pridáva odsadenie. <code>:set paste</code>, vlož, <code>:set nopaste</code>. Lepšie: <code>"+p</code>.</td></tr>
+    <tr><td><code>"+y</code> nefunguje</td><td>Vim bez podpory schránky (<code>vim --version | grep clipboard</code> → <code>-clipboard</code>). Nainštaluj <code>vim-gtk3</code>. Na Waylande ešte <code>wl-clipboard</code>.</td></tr>
+    <tr><td>Na koncoch riadkov <code>^M</code></td><td>Súbor má konce riadkov z Windows. <code>:set ff=unix</code> a <code>:w</code>, alebo <code>:%s/\r$//</code>.</td></tr>
+    <tr><td>Diakritika sa zobrazuje zle</td><td>Iné kódovanie. <code>:e ++enc=cp1250</code>, a ak je to ono, <code>:set fenc=utf-8</code> a <code>:w</code>.</td></tr>
+    <tr><td>Šípky vo vkladacom režime píšu <code>A B C D</code></td><td>Beží režim kompatibility s vi alebo <code>vim-tiny</code>. Nainštaluj plný <code>vim</code> alebo daj do <code>.vimrc</code> <code>set nocompatible</code>.</td></tr>
+    <tr><td>Backspace nemaže</td><td><code>set backspace=indent,eol,start</code></td></tr>
+    <tr><td><kbd>Esc</kbd> reaguje s oneskorením (v tmux)</td><td>V <code>~/.tmux.conf</code>: <code>set -sg escape-time 10</code>. Vo <code>.vimrc</code>: <code>set ttimeoutlen=50</code>.</td></tr>
+    <tr><td>Myšou sa nedá označiť text na kopírovanie</td><td>Pri <code>set mouse=a</code> výber riadi Vim. Drž <kbd>Shift</kbd> pri označovaní, alebo použi <code>"+y</code>.</td></tr>
+    <tr><td>Chyba vo <code>.vimrc</code> pri štarte</td><td>Spusti <code>vim -u NONE</code> (bez konfigurácie) alebo <code>vim --clean</code>, oprav súbor. Postupné hľadanie: <code>vim -V9log.txt</code>.</td></tr>
+    <tr><td>Kto nastavil túto hodnotu?</td><td><code>:verbose set shiftwidth?</code> ukáže súbor a riadok.</td></tr>
+  </table>
+  </div>
+  </section>
+
+  <!-- ===== Ťahák ===== -->
+  <section class="box t1">
+  <h2 id="tahak">Ťahák</h2>
+  <div class="tahak">
+    <div class="card">
+      <h3>Prežitie</h3>
+      <table>
+        <tr><td><kbd>Esc</kbd></td><td>späť do normálneho režimu</td></tr>
+        <tr><td><kbd>i</kbd></td><td>začni písať</td></tr>
+        <tr><td><code>:w</code></td><td>ulož</td></tr>
+        <tr><td><code>:wq</code> / <kbd>Z</kbd><kbd>Z</kbd></td><td>ulož a skonči</td></tr>
+        <tr><td><code>:q!</code></td><td>skonči bez uloženia</td></tr>
+        <tr><td><kbd>u</kbd> / <kbd>Ctrl</kbd>+<kbd>r</kbd></td><td>späť / znova</td></tr>
+        <tr><td><code>:help x</code></td><td>pomoc</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Pohyb</h3>
+      <table>
+        <tr><td><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></td><td>← ↓ ↑ →</td></tr>
+        <tr><td><kbd>w</kbd> <kbd>b</kbd> <kbd>e</kbd></td><td>slovo dopredu / dozadu / koniec</td></tr>
+        <tr><td><kbd>0</kbd> <kbd>^</kbd> <kbd>$</kbd></td><td>začiatok / text / koniec riadku</td></tr>
+        <tr><td><kbd>g</kbd><kbd>g</kbd> <kbd>G</kbd></td><td>začiatok / koniec súboru</td></tr>
+        <tr><td><code>:42</code></td><td>riadok 42</td></tr>
+        <tr><td><kbd>f</kbd><kbd>x</kbd> <kbd>t</kbd><kbd>x</kbd></td><td>na znak / pred znak</td></tr>
+        <tr><td><kbd>%</kbd></td><td>párová zátvorka</td></tr>
+        <tr><td><kbd>{</kbd> <kbd>}</kbd></td><td>odsek</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>d</kbd>/<kbd>u</kbd></td><td>pol obrazovky</td></tr>
+        <tr><td><kbd>z</kbd><kbd>z</kbd></td><td>vycentrovať</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>o</kbd></td><td>späť po skoku</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Vkladanie</h3>
+      <table>
+        <tr><td><kbd>i</kbd> <kbd>a</kbd></td><td>pred / za kurzor</td></tr>
+        <tr><td><kbd>I</kbd> <kbd>A</kbd></td><td>začiatok / koniec riadku</td></tr>
+        <tr><td><kbd>o</kbd> <kbd>O</kbd></td><td>nový riadok pod / nad</td></tr>
+        <tr><td><kbd>C</kbd></td><td>prepíš do konca riadku</td></tr>
+        <tr><td><kbd>c</kbd><kbd>c</kbd></td><td>prepíš riadok</td></tr>
+        <tr><td><kbd>r</kbd><kbd>x</kbd></td><td>nahraď jeden znak</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Úpravy</h3>
+      <table>
+        <tr><td><kbd>x</kbd></td><td>zmaž znak</td></tr>
+        <tr><td><kbd>d</kbd><kbd>d</kbd></td><td>zmaž (vystrihni) riadok</td></tr>
+        <tr><td><kbd>D</kbd></td><td>zmaž do konca riadku</td></tr>
+        <tr><td><kbd>d</kbd><kbd>i</kbd><kbd>w</kbd></td><td>zmaž slovo</td></tr>
+        <tr><td><kbd>c</kbd><kbd>i</kbd><kbd>"</kbd></td><td>prepíš text v úvodzovkách</td></tr>
+        <tr><td><kbd>y</kbd><kbd>y</kbd></td><td>kopíruj riadok</td></tr>
+        <tr><td><kbd>p</kbd> <kbd>P</kbd></td><td>vlož za / pred</td></tr>
+        <tr><td><kbd>J</kbd></td><td>spoj riadky</td></tr>
+        <tr><td><kbd>&gt;</kbd><kbd>&gt;</kbd> <kbd>&lt;</kbd><kbd>&lt;</kbd></td><td>odsaď</td></tr>
+        <tr><td><kbd>.</kbd></td><td>zopakuj zmenu</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Výber a schránka</h3>
+      <table>
+        <tr><td><kbd>v</kbd> <kbd>V</kbd></td><td>výber znakov / riadkov</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>v</kbd></td><td>blokový výber</td></tr>
+        <tr><td><kbd>g</kbd><kbd>v</kbd></td><td>znova posledný výber</td></tr>
+        <tr><td><code>"+y</code> <code>"+p</code></td><td>systémová schránka</td></tr>
+        <tr><td><code>"0p</code></td><td>vlož posledné kopírovanie</td></tr>
+        <tr><td><code>:reg</code></td><td>obsah registrov</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Hľadanie a nahrádzanie</h3>
+      <table>
+        <tr><td><code>/text</code> <code>?text</code></td><td>hľadaj dopredu / dozadu</td></tr>
+        <tr><td><kbd>n</kbd> <kbd>N</kbd></td><td>ďalší / predchádzajúci</td></tr>
+        <tr><td><kbd>*</kbd></td><td>slovo pod kurzorom</td></tr>
+        <tr><td><code>:noh</code></td><td>vypni zvýraznenie</td></tr>
+        <tr><td><code>:%s/a/b/g</code></td><td>nahraď všade</td></tr>
+        <tr><td><code>:%s/a/b/gc</code></td><td>nahraď s potvrdením</td></tr>
+        <tr><td><code>:g/vzor/d</code></td><td>zmaž riadky so vzorom</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Súbory, okná, karty</h3>
+      <table>
+        <tr><td><code>:e subor</code></td><td>otvor súbor</td></tr>
+        <tr><td><code>:ls</code> <code>:b n</code></td><td>buffre / prepni</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>^</kbd></td><td>predchádzajúci súbor</td></tr>
+        <tr><td><code>:sp</code> <code>:vs</code></td><td>rozdeľ okno</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>w</kbd> <kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></td><td>prepni okno</td></tr>
+        <tr><td><code>:tabnew</code> <kbd>g</kbd><kbd>t</kbd></td><td>nová karta / ďalšia</td></tr>
+        <tr><td><code>:Ex</code></td><td>prehliadač súborov</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Makrá a značky</h3>
+      <table>
+        <tr><td><kbd>q</kbd><kbd>a</kbd> … <kbd>q</kbd></td><td>nahraj makro</td></tr>
+        <tr><td><kbd>@</kbd><kbd>a</kbd> <kbd>@</kbd><kbd>@</kbd></td><td>prehraj / zopakuj</td></tr>
+        <tr><td><kbd>m</kbd><kbd>a</kbd> <kbd>`</kbd><kbd>a</kbd></td><td>značka / skok na ňu</td></tr>
+        <tr><td><kbd>`</kbd><kbd>.</kbd></td><td>posledná zmena</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Rôzne</h3>
+      <table>
+        <tr><td><code>:set nu</code> <code>rnu</code></td><td>čísla riadkov</td></tr>
+        <tr><td><code>:set paste</code></td><td>pred vložením z terminálu</td></tr>
+        <tr><td><code>:!príkaz</code></td><td>spusti shell príkaz</td></tr>
+        <tr><td><code>:r !date</code></td><td>vlož výstup príkazu</td></tr>
+        <tr><td><code>:sort u</code></td><td>zoraď, bez duplicít</td></tr>
+        <tr><td><code>:w !sudo tee %</code></td><td>ulož s právami roota</td></tr>
+        <tr><td><code>vimtutor</code></td><td>interaktívny kurz</td></tr>
+      </table>
+    </div>
+  </div>
+  </section>
+</main>
+<script>
+// Tlačidlo „Kopírovať“ pri každom bloku príkazov (komentáre # sa nekopírujú).
+document.querySelectorAll("pre").forEach(function (pre) {
+  var b = document.createElement("button");
+  b.className = "copy";
+  b.type = "button";
+  b.textContent = "Kopírovať";
+  b.addEventListener("click", function () {
+    var kod = pre.querySelector("code").cloneNode(true);
+    kod.querySelectorAll(".c").forEach(function (c) { c.remove(); });
+    var text = kod.textContent.split("\n")
+      .map(function (r) { return r.replace(/\s+$/, ""); })
+      .filter(function (r) { return r !== ""; })
+      .join("\n");
+    function hotovo() { b.textContent = "Skopírované ✓"; setTimeout(function () { b.textContent = "Kopírovať"; }, 1500); }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(hotovo);
+    } else {
+      var t = document.createElement("textarea");
+      t.value = text; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); hotovo(); } catch (e) {}
+      t.remove();
+    }
+  });
+  pre.appendChild(b);
+});
+</script>
+</body>
+</html>
